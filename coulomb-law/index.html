@@ -82,6 +82,18 @@
   .readout td:first-child{text-align:left}
   .readout tr.total td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;padding-top:5px}
   .readout .muted{color:var(--ink-soft)}
+
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
+    margin:0 3px;line-height:1.15;font-size:0.92em}
+  .frac .num{padding:0 2px}
+  .frac .den{padding:0 2px;border-top:1.4px solid var(--ink)}
+  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;
+    padding:10px 12px;margin-top:10px}
+  .result-box .rline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .result-box .rline + .rline{margin-top:4px}
+  .result-box .rlabel{color:var(--ink-soft);font-size:0.76rem}
+  .result-box .rval{font-weight:600;font-size:0.98rem}
+  .angle-note{color:var(--ink-soft);font-size:0.74rem;margin-top:6px}
   sub{font-size:.72em}
   :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
   .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -615,8 +627,10 @@ function drawFBD(nets){
   fctx.clearRect(0, 0, W, H);
 
   const i = focusIdx, c = charges[i];
-  const ox = W/2, oy = H/2;
-  const Lmax = Math.min(W, H)*0.30;
+  const legendRowsGuess = charges.length > 4 ? 2 : 1;
+  const plotH = H - (legendRowsGuess*16 + 6);
+  const ox = W/2, oy = Math.max(30, plotH/2);
+  const Lmax = Math.min(W*0.42, plotH*0.42);
 
   const parts = [];
   for (let j = 0; j < charges.length; j++){
@@ -628,11 +642,11 @@ function drawFBD(nets){
   const maxMag = Math.max(nmag, ...parts.map(p => p.mag), 1e-30);
   const L = m => (m/maxMag)*Lmax;
 
-  // reference axes through the particle
+  // reference axes through the particle (kept clear of the legend strip)
   fctx.save();
   fctx.strokeStyle = "#D7E0E7"; fctx.lineWidth = 1; fctx.setLineDash([4,4]);
   fctx.beginPath(); fctx.moveTo(12, oy); fctx.lineTo(W-12, oy);
-  fctx.moveTo(ox, 12); fctx.lineTo(ox, H-12); fctx.stroke();
+  fctx.moveTo(ox, 12); fctx.lineTo(ox, plotH-6); fctx.stroke();
   fctx.setLineDash([]);
   fctx.fillStyle = "#A9B7C2"; fctx.font = '10px "IBM Plex Mono", monospace';
   fctx.textAlign = "left";
@@ -640,38 +654,67 @@ function drawFBD(nets){
   fctx.fillText("+y", ox+6, 20);
   fctx.restore();
 
-  function tipLabel(x, y, ux, uy, text, color){
-    fctx.save();
-    fctx.font = '600 10px "IBM Plex Mono", monospace';
-    const w = fctx.measureText(text).width;
-    const lx = x + ux*16, ly = y + uy*16 + 3;
-    const px = Math.max(w/2+4, Math.min(W-w/2-4, lx));
-    fctx.fillStyle = "rgba(255,255,255,.92)";
-    fctx.fillRect(px-w/2-3, ly-11, w+6, 14);
-    fctx.fillStyle = color; fctx.textAlign = "center";
-    fctx.fillText(text, px, ly);
-    fctx.restore();
-  }
-
-  // one arrow per interacting charge — the forces actually acting on the particle
+  // one arrow per interacting charge — the forces actually acting on the particle.
+  // No labels pinned to the tips: when two vectors point the same way their
+  // labels stack on top of each other. A fixed legend below reads correctly
+  // no matter which directions the arrows happen to take.
+  const legend = [];
   for (const p of parts){
     const len = L(p.mag);
+    const col = charges[p.j].q >= 0 ? "#C2352B" : "#1E5FA8";
+    legend.push({label: "F" + (p.j+1) + "" + (i+1), value: fmtForce(p.mag) + " N", color: col, dashed:false});
     if (len < 2) continue;
     const ux = p.fx/p.mag, uy = -p.fy/p.mag;
-    const ex = ox + ux*len, ey = oy + uy*len;
-    const col = charges[p.j].q >= 0 ? "#C2352B" : "#1E5FA8";
-    farrow(ox, oy, ex, ey, col, 2.4, false);
-    tipLabel(ex, ey, ux, uy, "F" + (p.j+1) + "" + (i+1) + " " + fmtForce(p.mag), col);
+    farrow(ox, oy, ox + ux*len, oy + uy*len, col, 2.4, false);
   }
 
   // resultant, drawn dashed so it reads as a sum rather than a fourth applied force
   if (nmag > 0){
     const len = L(nmag);
     const ux = n.fx/nmag, uy = -n.fy/nmag;
-    const ex = ox + ux*len, ey = oy + uy*len;
-    farrow(ox, oy, ex, ey, "#12705A", 3.0, true);
-    tipLabel(ex, ey, ux, uy, "\u03A3F " + fmtForce(nmag) + " N", "#12705A");
+    farrow(ox, oy, ox + ux*len, oy + uy*len, "#12705A", 3.0, true);
   }
+  legend.push({label: "\u03A3F", value: fmtForce(nmag) + " N", color:"#12705A", dashed:true});
+
+  // legend strip along the bottom, wrapping to a second line if it's crowded
+  fctx.save();
+  fctx.font = '600 10px "IBM Plex Mono", monospace';
+  const padX = 10, gap = 16, swatch = 14, rowH = 16;
+  const rows = [[]];
+  let rowW = padX, rowIdx = 0;
+  legend.forEach(item => {
+    const text = item.label + " " + item.value;
+    const w = swatch + 4 + fctx.measureText(text).width;
+    if (rowW + w + gap > W - padX && rows[rowIdx].length){
+      rows.push([]); rowIdx++; rowW = padX;
+    }
+    rows[rowIdx].push({...item, text, w});
+    rowW += w + gap;
+  });
+  const legendH = rows.length*rowH + 6;
+  fctx.fillStyle = "rgba(255,255,255,.94)";
+  fctx.fillRect(0, H-legendH, W, legendH);
+  fctx.strokeStyle = "#E2E9EE"; fctx.lineWidth = 1;
+  fctx.beginPath(); fctx.moveTo(0, H-legendH+.5); fctx.lineTo(W, H-legendH+.5); fctx.stroke();
+  rows.forEach((row, r) => {
+    let x = padX;
+    const y = H - legendH + 6 + r*rowH + rowH/2;
+    row.forEach(item => {
+      if (item.dashed){
+        fctx.strokeStyle = item.color; fctx.lineWidth = 2; fctx.setLineDash([3,2]);
+        fctx.beginPath(); fctx.moveTo(x, y); fctx.lineTo(x+swatch, y); fctx.stroke();
+        fctx.setLineDash([]);
+      } else {
+        fctx.fillStyle = item.color;
+        fctx.fillRect(x, y-2, swatch, 4);
+      }
+      fctx.fillStyle = "#16202B"; fctx.textAlign = "left"; fctx.textBaseline = "middle";
+      fctx.fillText(item.text, x + swatch + 4, y+1);
+      x += item.w + gap;
+    });
+  });
+  fctx.textBaseline = "alphabetic";
+  fctx.restore();
 
   // the particle itself
   fctx.save();
@@ -695,6 +738,11 @@ function drawFBD(nets){
 }
 
 /* ---------- analysis panel ---------- */
+function frac(numHtml, denHtml){
+  return '<span class="frac"><span class="num">' + numHtml + '</span>' +
+         '<span class="den">' + denHtml + '</span></span>';
+}
+
 function updateReadout(nets){
   const box = document.getElementById("readout");
   if (charges.length < 2){ box.innerHTML = '<span class="muted">' + T("empty") + '</span>'; return; }
@@ -702,7 +750,7 @@ function updateReadout(nets){
 
   const i = focusIdx;
   let html = '<div class="eq"><strong>' + T("forceOn") + ' q' + (i+1) + '</strong><br>' +
-             'F = k·q<sub>a</sub>q<sub>b</sub>/r²</div>';
+             '<span style="font-size:1.05em">F = k ' + frac('q<sub>a</sub>q<sub>b</sub>', 'r²') + '</span></div>';
   html += '<div class="tablewrap"><table><tr><th>' + T("source") + '</th><th>r (m)</th><th>F (N)</th>' +
           '<th>F<sub>x</sub></th><th>F<sub>y</sub></th></tr>';
   for (let j = 0; j < charges.length; j++){
@@ -720,10 +768,13 @@ function updateReadout(nets){
   if (mag > 0){
     const a = angDeg(n.fx, n.fy);
     const signed = a > 180 ? a - 360 : a;
-    html += '<div style="margin-top:10px">' +
-            '|F| = √(F<sub>x</sub>² + F<sub>y</sub>²) = <strong>' + fmtForce(mag) + ' N</strong><br>' +
-            'θ = arctan(F<sub>y</sub>/F<sub>x</sub>) = <strong>' + signed.toFixed(1) + '°</strong> ' +
-            '<span class="muted">(' + (signed >= 0 ? T("above") : T("below")) + ')</span></div>';
+    html += '<div class="result-box">' +
+              '<div class="rline"><span class="rlabel">|F| = \u221a(F<sub>x</sub>\u00b2 + F<sub>y</sub>\u00b2)</span>' +
+                '<span class="rval">' + fmtForce(mag) + ' N</span></div>' +
+              '<div class="rline"><span class="rlabel">\u03b8 = arctan' + frac('F<sub>y</sub>','F<sub>x</sub>') + '</span>' +
+                '<span class="rval">' + signed.toFixed(1) + '\u00b0</span></div>' +
+            '</div>' +
+            '<div class="angle-note">' + (signed >= 0 ? T("above") : T("below")) + '</div>';
   }
   box.innerHTML = html;
 }
