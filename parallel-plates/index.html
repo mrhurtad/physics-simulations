@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel Plates — Uniform Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F4; --panel:#FFFFFF; --ink:#16202B; --ink-soft:#5A6B79;
+    --rule:#C8D3DC; --pos:#C2352B; --neg:#1E5FA8; --field:#C23A9E; --probe:#B5760F; --force:#12705A; --focus:#D98B00;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:15px;line-height:1.5}
+  .frame{max-width:1200px;margin:0 auto;padding:24px 20px 48px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
+  h1{font-size:1.45rem;font-weight:600;margin:0;letter-spacing:-0.01em}
+  header p{margin:0;color:var(--ink-soft);font-size:0.9rem;flex:1 1 220px}
+  .lang{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+  .lang button{font:inherit;font-size:0.8rem;padding:4px 10px;border:0;background:var(--panel);
+    color:var(--ink-soft);cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+  .stage{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:3px}
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:grab;border-radius:3px}
+  canvas.dragging{cursor:grabbing}
+  .hint{position:absolute;left:12px;top:10px;font-size:0.78rem;color:var(--ink-soft);
+    background:rgba(255,255,255,.85);padding:2px 8px;border-radius:2px;pointer-events:none;max-width:70%}
+
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:14px}
+  .card h2{font-size:0.82rem;font-weight:600;margin:0 0 10px;color:var(--ink-soft);
+    letter-spacing:0.02em;border-bottom:1px solid var(--rule);padding-bottom:6px}
+
+  .plates-card{border-left:4px solid var(--field)}
+  .probe-card{border-left:4px solid var(--probe)}
+  .probe-row{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:0.85rem}
+  .probe-row input[type=number]{width:70px;font:inherit;font-size:0.82rem;padding:3px 5px;
+    border:1px solid var(--rule);border-radius:2px}
+  .probe-row input[type=range]{flex:1;accent-color:var(--probe)}
+  .probe-row + .probe-row{margin-top:8px}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button.act{font:inherit;font-size:0.85rem;padding:6px 12px;border:1px solid var(--ink);
+    background:var(--panel);color:var(--ink);border-radius:2px;cursor:pointer}
+  button.act:hover{background:var(--ink);color:#fff}
+
+  .readout{font-family:"IBM Plex Mono",monospace;font-size:0.8rem}
+  .readout .eq{font-size:0.88rem;margin-bottom:10px;line-height:1.8}
+  .readout table{width:100%;border-collapse:collapse}
+  .readout th{font-weight:500;color:var(--ink-soft);text-align:right;padding:3px 0;
+    border-bottom:1px solid var(--rule);font-size:0.75rem}
+  .readout th:first-child{text-align:left}
+  .readout td{padding:3px 0;border-bottom:1px dotted var(--rule);text-align:right}
+  .readout td:first-child{text-align:left}
+  .readout .muted{color:var(--ink-soft)}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
+    margin:0 3px;line-height:1.15;font-size:0.92em}
+  .frac .num{padding:0 2px}
+  .frac .den{padding:0 2px;border-top:1.4px solid var(--ink)}
+  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;
+    padding:10px 12px;margin-top:10px}
+  .result-box.force{background:#EDF3F0;border-color:#CFE0D6}
+  .result-box .rline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .result-box .rline + .rline{margin-top:4px}
+  .result-box .rlabel{color:var(--ink-soft);font-size:0.76rem}
+  .result-box .rval{font-weight:600;font-size:0.98rem}
+  .angle-note{color:var(--ink-soft);font-size:0.74rem;margin-top:6px}
+  .box-title{font-size:0.72rem;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;
+    color:var(--ink-soft);margin:14px 0 6px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:0.78rem;margin-top:10px}
+  .legend span.sw{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  sub,sup{font-size:.72em}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  footer{margin-top:22px;font-size:0.8rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:10px}
+
+  @media (max-width:600px){
+    .frame{padding:14px 12px 36px}
+    header{gap:10px;margin-bottom:12px}
+    h1{font-size:1.2rem}
+    header p{font-size:0.84rem;flex-basis:100%;order:3}
+    .layout{gap:12px}
+    .card{padding:12px}
+    button.act{padding:9px 14px;font-size:0.88rem}
+    .readout{font-size:0.75rem}
+    .readout .eq{font-size:0.84rem}
+    .hint{font-size:0.72rem}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1 id="t-title">Parallel Plates — Uniform Field</h1>
+    <p id="t-sub">Drag the test point between the plates. The field here is uniform: the same everywhere inside the gap.</p>
+    <div class="lang">
+      <button id="lang-en" aria-pressed="true">EN</button>
+      <button id="lang-es" aria-pressed="false">ES</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <canvas id="sim"></canvas>
+      <div class="hint" id="t-hint">Click anywhere to move the test point</div>
+    </div>
+
+    <div class="rail">
+      <div class="card plates-card">
+        <h2 id="t-plates">Plates</h2>
+        <div class="probe-row">
+          <span data-i18n="voltage">Voltage</span>
+          <input type="number" id="plate-v" value="100" step="10">
+          <span>V</span>
+        </div>
+        <div class="probe-row">
+          <span data-i18n="separation">Separation</span>
+          <input type="number" id="plate-d" value="1.0" step="0.1" min="0.1">
+          <span>cm</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="act" id="plate-flip" data-i18n="flip">Flip polarity</button>
+        </div>
+      </div>
+
+      <div class="card probe-card">
+        <h2 id="t-probe">Test point</h2>
+        <div class="probe-row" style="margin-bottom:2px">
+          <span data-i18n="probeCharge">Test charge q₀</span>
+        </div>
+        <div class="probe-row">
+          <input type="range" id="probe-q" min="-5" max="5" step="0.5" value="1">
+          <input type="number" id="probe-q-num" step="0.5" value="1" style="width:60px">
+          <span>µC</span>
+        </div>
+        <div class="angle-note" style="margin-top:8px" id="t-electronNote">An electron has charge −1.6×10⁻¹⁹ C — type a very small negative number here to approximate it.</div>
+      </div>
+
+      <div class="card">
+        <h2 id="t-analysis">Field and force at the test point</h2>
+        <div class="readout" id="readout"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="t-foot">Idealized parallel-plate capacitor: fringing is ignored, so E = V/d everywhere between the plates and E ≈ 0 outside. Field points from the + plate to the − plate. k = 8.99 × 10⁹ N·m²/C².</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const MAX_COORD = 5;
+let ASPECT = 0.62;
+const isSmall = () => (canvas.parentElement.clientWidth || 800) < 560;
+const view = {cx:0, cy:0, span:1.0};
+let S = 1, DPR = 1;
+
+const canvas = document.getElementById("sim");
+const ctx = canvas.getContext("2d");
+
+let probe = {x:0, y:0};
+let probeQ = 1;               // µC
+let plateV = 100;             // volts
+let plateD = 1.0;             // cm
+let plateFlip = false;        // false: + plate on bottom, field points +y
+let dragging = false, dragMoved = false;
+
+const plateD_m = () => plateD/100;
+
+/* ---------- language ---------- */
+const STR = {
+  en:{
+    title:"Parallel Plates — Uniform Field",
+    sub:"Drag the test point between the plates. The field here is uniform: the same everywhere inside the gap.",
+    hint:"Click anywhere to move the test point",
+    plates:"Plates", probe:"Test point", analysis:"Field and force at the test point",
+    voltage:"Voltage", separation:"Separation", flip:"Flip polarity", probeCharge:"Test charge q₀",
+    electronNote:"An electron has charge \u22121.6\u00d710\u207b\u00b9\u2079 C \u2014 type a very small negative number here to approximate it.",
+    foot:"Idealized parallel-plate capacitor: fringing is ignored, so E = V/d everywhere between the plates and E ≈ 0 outside. Field points from the + plate to the − plate. k = 8.99 × 10⁹ N·m²/C².",
+    uniformField:"The field is uniform between the plates", posOnTop:"+ plate on top — field points down",
+    posOnBottom:"+ plate on bottom — field points up", outside:"This point is outside the plates — the idealized field here is zero.",
+    above:"above the +x axis", below:"below the +x axis",
+    forceOn:"Force on q₀", noForce:"Set a nonzero test charge to see the force it would feel here.",
+    sameDir:"This force points in the same direction as E, because q₀ is positive.",
+    oppDir:"This force points opposite to E, because q₀ is negative.",
+    legendE:"E (field)", legendF:"F on q₀"
+  },
+  es:{
+    title:"Placas Paralelas — Campo Uniforme",
+    sub:"Arrastra el punto de prueba entre las placas. El campo aquí es uniforme: igual en todo el espacio entre placas.",
+    hint:"Haz clic en cualquier lugar para mover el punto de prueba",
+    plates:"Placas", probe:"Punto de prueba", analysis:"Campo y fuerza en el punto de prueba",
+    voltage:"Voltaje", separation:"Separación", flip:"Invertir polaridad", probeCharge:"Carga de prueba q₀",
+    electronNote:"Un electrón tiene carga \u22121.6\u00d710\u207b\u00b9\u2079 C \u2014 escribe aquí un número negativo muy pequeño para aproximarlo.",
+    foot:"Capacitor de placas paralelas idealizado: se ignora el efecto de borde, así que E = V/d en todo el espacio entre placas y E ≈ 0 afuera. El campo va de la placa + a la placa −. k = 8.99 × 10⁹ N·m²/C².",
+    uniformField:"El campo es uniforme entre las placas", posOnTop:"placa + arriba — el campo apunta hacia abajo",
+    posOnBottom:"placa + abajo — el campo apunta hacia arriba", outside:"Este punto está fuera de las placas — el campo idealizado aquí es cero.",
+    above:"sobre el eje +x", below:"bajo el eje +x",
+    forceOn:"Fuerza sobre q₀", noForce:"Define una carga de prueba distinta de cero para ver la fuerza que sentiría aquí.",
+    sameDir:"Esta fuerza apunta en la misma dirección que E, porque q₀ es positiva.",
+    oppDir:"Esta fuerza apunta en dirección opuesta a E, porque q₀ es negativa.",
+    legendE:"E (campo)", legendF:"F sobre q₀"
+  }
+};
+let lang = "en";
+const T = k => STR[lang][k] || k;
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.getElementById("t-title").textContent = T("title");
+  document.getElementById("t-sub").textContent = T("sub");
+  document.getElementById("t-hint").textContent = T("hint");
+  document.getElementById("t-plates").textContent = T("plates");
+  document.getElementById("t-probe").textContent = T("probe");
+  document.getElementById("t-analysis").textContent = T("analysis");
+  document.getElementById("t-foot").textContent = T("foot");
+  document.getElementById("t-electronNote").textContent = T("electronNote");
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = T(el.dataset.i18n));
+  document.getElementById("lang-en").setAttribute("aria-pressed", lang === "en");
+  document.getElementById("lang-es").setAttribute("aria-pressed", lang === "es");
+  draw();
+}
+
+/* ---------- physics: idealized uniform field ---------- */
+function fieldAt(x, y){
+  const half = plateD_m()/2;
+  if (Math.abs(y) > half) return {ex:0, ey:0};
+  const mag = plateV/plateD_m();
+  const dir = plateFlip ? -1 : 1;
+  return {ex:0, ey: dir*mag};
+}
+
+/* ---------- formatting ---------- */
+function fmtField(n){
+  const a = Math.abs(n);
+  if (a === 0) return "0 N/C";
+  if (a >= 1e9) return (n/1e9).toFixed(2) + " GN/C";
+  if (a >= 1e6) return (n/1e6).toFixed(2) + " MN/C";
+  if (a >= 1e3) return (n/1e3).toFixed(2) + " kN/C";
+  if (a >= 1)   return n.toFixed(1) + " N/C";
+  return n.toExponential(2) + " N/C";
+}
+function fmtForce(n){
+  const a = Math.abs(n);
+  if (a === 0) return "0 N";
+  if (a >= 1)     return n.toFixed(3) + " N";
+  if (a >= 1e-3)  return (n*1e3).toFixed(2) + " mN";
+  if (a >= 1e-9)  return (n*1e6).toFixed(2) + " \u00b5N";
+  return n.toExponential(2) + " N";
+}
+function frac(numHtml, denHtml){
+  return '<span class="frac"><span class="num">' + numHtml + '</span><span class="den">' + denHtml + '</span></span>';
+}
+
+/* ---------- view mapping ---------- */
+function resize(){
+  const w = canvas.parentElement.clientWidth;
+  ASPECT = w < 560 ? 0.95 : (w < 780 ? 0.76 : 0.62);
+  const h = Math.round(w*ASPECT);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  canvas.style.height = h + "px";
+  DPR = dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fitView();
+  draw();
+}
+const cw = () => canvas.width/DPR;
+const chh = () => canvas.height/DPR;
+const sx = x => cw()/2 + (x - view.cx)*S;
+const sy = y => chh()/2 - (y - view.cy)*S;
+const mx = p => view.cx + (p - cw()/2)/S;
+const my = p => view.cy - (p - chh()/2)/S;
+
+// The plate gap sets the vertical scale; the view widens automatically if the
+// probe is dragged far in x (the field is uniform in x, so nothing is lost).
+function fitView(){
+  const gap = plateD_m();
+  let span = Math.max(0.3, gap/(ASPECT*0.32));
+  span = Math.max(span, Math.abs(probe.x)*2.6, (Math.abs(probe.y)*2.6)/ASPECT);
+  view.span = span; view.cx = 0; view.cy = 0;
+  S = cw()/view.span;
+}
+function fitIfNeeded(){
+  const padX = view.span*0.08, padY = view.span*ASPECT*0.08;
+  const left=-view.span/2+padX, right=view.span/2-padX;
+  const bottom=-view.span*ASPECT/2+padY, top=view.span*ASPECT/2-padY;
+  if (probe.x<left || probe.x>right || probe.y<bottom || probe.y>top) fitView();
+}
+
+/* ---------- drawing ---------- */
+function arrow(x1,y1,x2,y2,color,width,dashed){
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+  if (len < 3) return;
+  const head = Math.min(12, len*0.35);
+  const ux=dx/len, uy=dy/len;
+  const bx=x2-ux*head, by=y2-uy*head;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=width; ctx.lineCap="round";
+  if (dashed) ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(bx-uy*head*0.38, by+ux*head*0.38);
+  ctx.lineTo(bx+uy*head*0.38, by-ux*head*0.38);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawPlates(){
+  const half = plateD_m()/2;
+  const yNeg = plateFlip ? -half : half;     // the "−" plate's y-coordinate
+  const yPos = -yNeg;
+  const bandPx = Math.max(10, Math.min(20, S*half*0.5));
+
+  function band(yWorld, sign){
+    const y = sy(yWorld);
+    ctx.save();
+    ctx.fillStyle = sign < 0 ? "rgba(30,95,168,.16)" : "rgba(194,53,43,.16)";
+    ctx.fillRect(0, y-bandPx/2, cw(), bandPx);
+    ctx.strokeStyle = sign < 0 ? "#1E5FA8" : "#C2352B";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(0, y-bandPx/2); ctx.lineTo(cw(), y-bandPx/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y+bandPx/2); ctx.lineTo(cw(), y+bandPx/2); ctx.stroke();
+    ctx.fillStyle = sign < 0 ? "#1E5FA8" : "#C2352B";
+    ctx.font = '700 ' + (isSmall()?14:16) + 'px "IBM Plex Mono", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const glyph = sign < 0 ? "\u2212" : "+";
+    const step = Math.max(34, cw()/14);
+    for (let x = step/2; x < cw(); x += step) ctx.fillText(glyph, x, y);
+    ctx.textBaseline = "alphabetic";
+    ctx.restore();
+  }
+  band(yNeg, -1);
+  band(yPos, 1);
+
+  const yFrom = sy(yPos), yTo = sy(yNeg);
+  const dir = yTo > yFrom ? 1 : -1;
+  const inset = bandPx/2 + 3;
+  const startY = yFrom + dir*inset, endY = yTo - dir*inset;
+  const step = Math.max(38, cw()/13);
+  for (let x = step/2; x < cw(); x += step){
+    arrow(x, startY, x, endY, "#C23A9E", 1.6, false);
+  }
+}
+
+function drawProbe(E){
+  const x = sx(probe.x), y = sy(probe.y);
+  const mag = Math.hypot(E.ex, E.ey);
+  let drewE = false, drewF = false;
+
+  if (mag > 0){
+    const len = Math.min(cw(), chh())*0.28;
+    const ux = E.ex/mag, uy = -E.ey/mag;
+    const px = -uy, py = ux;
+    const offset = Math.abs(probeQ) > 1e-9 ? 6 : 0;
+    // Same color as the thin field lines between the plates — this arrow IS that field,
+    // just measured at one point, so it should read as the same thing, not a second field.
+    arrow(x+px*offset, y+py*offset, x+px*offset+ux*len, y+py*offset+uy*len, "#C23A9E", 3, false);
+    drewE = true;
+
+    if (Math.abs(probeQ) > 1e-9){
+      const sign = probeQ > 0 ? 1 : -1;
+      arrow(x-px*offset, y-py*offset, x-px*offset+ux*sign*len*0.85, y-py*offset+uy*sign*len*0.85, "#12705A", 3, false);
+      drewF = true;
+    }
+  }
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI*2);
+  ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.lineWidth = 2.4; ctx.strokeStyle = "#B5760F"; ctx.stroke();
+  ctx.strokeStyle = "#B5760F"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5);
+  ctx.stroke();
+  ctx.fillStyle = "#16202B"; ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
+  ctx.textAlign = "left";
+  ctx.fillText("P", x+10, y-8);
+  // Explicit sign and value, right on the canvas, so it never depends on remembering the slider.
+  const qLabel = "q\u2080 = " + (probeQ > 0 ? "+" : "") + probeQ.toFixed(1) + " \u00b5C";
+  ctx.font = (isSmall()?10:11) + 'px "IBM Plex Mono", monospace';
+  ctx.fillStyle = "#5A6B79";
+  ctx.fillText(qLabel, x+10, y+16);
+  ctx.restore();
+
+  if (drewE || drewF) drawProbeLegend(drewE, drewF);
+}
+
+// Small fixed legend, top-right of the canvas, so the amber/violet arrows are
+// identifiable regardless of where the test point currently sits.
+function drawProbeLegend(showE, showF){
+  const items = [];
+  if (showE) items.push({label:"E", color:"#C23A9E"});
+  if (showF) items.push({label: (lang === "es" ? "F sobre q\u2080" : "F on q\u2080"), color:"#12705A"});
+  if (!items.length) return;
+  ctx.save();
+  ctx.font = '600 ' + (isSmall()?10:11) + 'px "IBM Plex Mono", monospace';
+  let w = 16;
+  const widths = items.map(it => { const tw = ctx.measureText(it.label).width; w += 20+tw+14; return tw; });
+  w -= 14;
+  const h = 24, x0 = cw()-w-10, y0 = 10;
+  ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.strokeStyle = "#E2E9EE"; ctx.lineWidth = 1;
+  ctx.fillRect(x0, y0, w, h); ctx.strokeRect(x0+.5, y0+.5, w, h);
+  let x = x0+10;
+  items.forEach((it, i) => {
+    ctx.strokeStyle = it.color; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y0+h/2); ctx.lineTo(x+16, y0+h/2); ctx.stroke();
+    ctx.fillStyle = "#16202B"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(it.label, x+22, y0+h/2+1);
+    x += 22+widths[i]+14;
+  });
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+
+function draw(){
+  ctx.clearRect(0, 0, cw(), chh());
+  drawPlates();
+  const E = fieldAt(probe.x, probe.y);
+  drawProbe(E);
+  updateReadout(E);
+}
+
+/* ---------- analysis panel ---------- */
+function updateReadout(E){
+  const box = document.getElementById("readout");
+  const half = plateD_m()/2;
+  const inside = Math.abs(probe.y) <= half;
+  const mag = Math.hypot(E.ex, E.ey);
+
+  let html = '<div class="eq"><strong>' + T("uniformField") + '</strong><br>' +
+             '<span style="font-size:1.05em">E = ' + frac('V','d') + '</span></div>';
+  html += '<div class="tablewrap"><table><tr><th>V (V)</th><th>d (m)</th><th>E</th></tr>' +
+          '<tr><td>' + plateV.toFixed(0) + '</td><td>' + plateD_m().toFixed(3) + '</td><td>' +
+          fmtField(plateV/plateD_m()) + '</td></tr></table></div>';
+  html += '<div class="angle-note">' + (plateFlip ? T("posOnTop") : T("posOnBottom")) + '</div>';
+
+  if (!inside){
+    html += '<div class="result-box"><div class="rline"><span class="rlabel">|E|</span>' +
+            '<span class="rval">0 N/C</span></div></div>' +
+            '<div class="angle-note">' + T("outside") + '</div>';
+  } else {
+    html += '<div class="result-box">' +
+              '<div class="rline"><span class="rlabel">|E|</span><span class="rval">' + fmtField(mag) + '</span></div>' +
+            '</div>';
+
+    html += '<div class="box-title">' + T("forceOn") + '</div>';
+    if (Math.abs(probeQ) > 1e-9){
+      const Fx = probeQ*1e-6*E.ex, Fy = probeQ*1e-6*E.ey;
+      const Fmag = Math.hypot(Fx, Fy);
+      html += '<div class="eq" style="margin-bottom:6px">F = q<sub>0</sub>E</div>' +
+              '<div class="result-box force">' +
+                '<div class="rline"><span class="rlabel">|F|</span><span class="rval">' + fmtForce(Fmag) + '</span></div>' +
+              '</div>' +
+              '<div class="angle-note">' + (probeQ > 0 ? T("sameDir") : T("oppDir")) + '</div>';
+    } else {
+      html += '<div class="muted" style="font-size:0.78rem">' + T("noForce") + '</div>';
+    }
+  }
+
+  html += '<div class="legend">' +
+            '<span><span class="sw" style="background:#C23A9E"></span>' + T("legendE") + '</span>' +
+            '<span><span class="sw" style="background:#12705A"></span>' + T("legendF") + '</span>' +
+          '</div>';
+  box.innerHTML = html;
+}
+
+/* ---------- pointer interaction ---------- */
+function pointerPos(e){
+  const rect = canvas.getBoundingClientRect();
+  return {x: mx(e.clientX-rect.left), y: my(e.clientY-rect.top)};
+}
+canvas.addEventListener("pointerdown", e => {
+  const p = pointerPos(e);
+  probe.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.x));
+  probe.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.y));
+  dragging = true; dragMoved = true;
+  canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+  fitIfNeeded(); draw();
+});
+canvas.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  const p = pointerPos(e);
+  probe.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.x));
+  probe.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.y));
+  fitIfNeeded(); draw();
+});
+function endDrag(){ if (!dragging) return; dragging = false; canvas.classList.remove("dragging"); draw(); }
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+/* ---------- wiring ---------- */
+document.getElementById("plate-v").oninput = e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v)){ plateV = v; draw(); }
+};
+document.getElementById("plate-d").oninput = e => {
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v) && v > 0){ plateD = v; fitView(); draw(); }
+};
+document.getElementById("plate-flip").onclick = () => { plateFlip = !plateFlip; draw(); };
+
+const probeQSlider = document.getElementById("probe-q");
+const probeQNum = document.getElementById("probe-q-num");
+probeQSlider.oninput = () => { probeQ = parseFloat(probeQSlider.value); probeQNum.value = probeQ; draw(); };
+probeQNum.oninput = () => {
+  const v = parseFloat(probeQNum.value);
+  if (!isNaN(v)){ probeQ = v; if (Math.abs(v) <= 5) probeQSlider.value = v; draw(); }
+};
+
+document.getElementById("lang-en").onclick = () => { lang = "en"; applyLang(); };
+document.getElementById("lang-es").onclick = () => { lang = "es"; applyLang(); };
+
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => setTimeout(resize, 250));
+
+applyLang();
+resize();
+})();
+</script>
+</body>
+</html>
