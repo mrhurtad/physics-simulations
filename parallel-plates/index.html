@@ -289,7 +289,7 @@ const my = p => view.cy - (p - chh()/2)/S;
 // probe is dragged far in x (the field is uniform in x, so nothing is lost).
 function fitView(){
   const gap = plateD_m();
-  let span = Math.max(0.3, gap/(ASPECT*0.32));
+  let span = Math.max(0.015, gap/(ASPECT*0.32));
   span = Math.max(span, Math.abs(probe.x)*2.6, (Math.abs(probe.y)*2.6)/ASPECT);
   view.span = span; view.cx = 0; view.cy = 0;
   S = cw()/view.span;
@@ -385,7 +385,8 @@ function drawProbe(E){
   ctx.lineWidth = 2.4; ctx.strokeStyle = "#B5760F"; ctx.stroke();
   ctx.strokeStyle = "#B5760F"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5);
+  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y);
+  if (probeQ >= 0){ ctx.moveTo(x,y-5); ctx.lineTo(x,y+5); }   // "+" when q0 ≥ 0, "−" (bar only) when q0 < 0
   ctx.stroke();
   ctx.fillStyle = "#16202B"; ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
   ctx.textAlign = "left";
