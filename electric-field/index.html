@@ -585,7 +585,8 @@ function drawProbe(E){
   ctx.lineWidth = 2.4; ctx.strokeStyle = "#B5760F"; ctx.stroke();
   ctx.strokeStyle = "#B5760F"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5);
+  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y);
+  if (probeQ >= 0){ ctx.moveTo(x,y-5); ctx.lineTo(x,y+5); }   // "+" when q0 ≥ 0, "−" (bar only) when q0 < 0
   ctx.stroke();
   ctx.fillStyle = "#16202B"; ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
   ctx.textAlign = "left";
