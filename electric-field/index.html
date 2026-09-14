@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electric Field Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F4; --panel:#FFFFFF; --ink:#16202B; --ink-soft:#5A6B79;
+    --rule:#C8D3DC; --pos:#C2352B; --neg:#1E5FA8; --field:#3C6E9E; --probe:#B5760F; --focus:#D98B00;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:15px;line-height:1.5}
+  .frame{max-width:1200px;margin:0 auto;padding:24px 20px 48px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
+  h1{font-size:1.45rem;font-weight:600;margin:0;letter-spacing:-0.01em}
+  header p{margin:0;color:var(--ink-soft);font-size:0.9rem;flex:1 1 220px}
+  .lang{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+  .lang button{font:inherit;font-size:0.8rem;padding:4px 10px;border:0;background:var(--panel);
+    color:var(--ink-soft);cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+  .stage{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:3px}
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:grab;border-radius:3px}
+  canvas.dragging{cursor:grabbing}
+  .hint{position:absolute;left:12px;top:10px;font-size:0.78rem;color:var(--ink-soft);
+    background:rgba(255,255,255,.85);padding:2px 8px;border-radius:2px;pointer-events:none;max-width:70%}
+
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:14px}
+  .card h2{font-size:0.82rem;font-weight:600;margin:0 0 10px;color:var(--ink-soft);
+    letter-spacing:0.02em;border-bottom:1px solid var(--rule);padding-bottom:6px}
+
+  .fbd-wrap{border:1px solid var(--rule);border-radius:2px;background:#FBFCFD;margin-bottom:12px}
+  canvas#fbd{display:block;width:100%;height:auto}
+
+  .charge{border-left:4px solid var(--pos);padding:8px 0 10px 10px;margin-bottom:10px}
+  .charge.neg{border-left-color:var(--neg)}
+  .charge:last-child{margin-bottom:0}
+  .charge-top{display:flex;align-items:center;gap:8px}
+  .charge-name{font-family:"IBM Plex Mono",monospace;font-size:0.9rem;font-weight:600;flex:1}
+  .charge input[type=range]{width:100%;margin:6px 0 4px;accent-color:var(--ink)}
+  .coords{display:flex;gap:6px;align-items:center;font-family:"IBM Plex Mono",monospace;
+    font-size:0.78rem;color:var(--ink-soft)}
+  .coords input[type=number]{width:64px;font:inherit;font-size:0.8rem;padding:2px 4px;
+    border:1px solid var(--rule);border-radius:2px;background:#fff;color:var(--ink)}
+  .drop{border:0;background:none;color:var(--ink-soft);cursor:pointer;font:inherit;
+    font-size:1.05rem;line-height:1;padding:0 2px}
+  .drop:hover{color:var(--pos)}
+
+  .probe-card{border-left:4px solid var(--probe)}
+  .probe-row{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:0.85rem}
+  .probe-row input[type=number]{width:64px;font:inherit;font-size:0.82rem;padding:3px 5px;
+    border:1px solid var(--rule);border-radius:2px}
+  .probe-row input[type=range]{flex:1;accent-color:var(--probe)}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button.act{font:inherit;font-size:0.85rem;padding:6px 12px;border:1px solid var(--ink);
+    background:var(--panel);color:var(--ink);border-radius:2px;cursor:pointer}
+  button.act:hover{background:var(--ink);color:#fff}
+  button.act:disabled{opacity:.35;cursor:not-allowed}
+  label.check{display:flex;align-items:center;gap:8px;font-size:0.87rem;padding:3px 0;cursor:pointer}
+  label.check input{accent-color:var(--ink);width:15px;height:15px}
+  .scale-row{margin-top:10px;font-size:0.85rem;color:var(--ink-soft)}
+  .scale-row input{width:100%;accent-color:var(--ink)}
+
+  .readout{font-family:"IBM Plex Mono",monospace;font-size:0.8rem}
+  .readout .eq{font-size:0.88rem;margin-bottom:10px;line-height:1.8}
+  .readout table{width:100%;border-collapse:collapse}
+  .readout th{font-weight:500;color:var(--ink-soft);text-align:right;padding:3px 0;
+    border-bottom:1px solid var(--rule);font-size:0.75rem}
+  .readout th:first-child{text-align:left}
+  .readout td{padding:3px 0;border-bottom:1px dotted var(--rule);text-align:right}
+  .readout td:first-child{text-align:left}
+  .readout tr.total td{border-top:2px solid var(--ink);border-bottom:0;font-weight:600;padding-top:5px}
+  .readout .muted{color:var(--ink-soft)}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
+    margin:0 3px;line-height:1.15;font-size:0.92em}
+  .frac .num{padding:0 2px}
+  .frac .den{padding:0 2px;border-top:1.4px solid var(--ink)}
+  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;
+    padding:10px 12px;margin-top:10px}
+  .result-box.force{background:#F5EBF3;border-color:#E0C6DB}
+  .result-box .rline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .result-box .rline + .rline{margin-top:4px}
+  .result-box .rlabel{color:var(--ink-soft);font-size:0.76rem}
+  .result-box .rval{font-weight:600;font-size:0.98rem}
+  .angle-note{color:var(--ink-soft);font-size:0.74rem;margin-top:6px}
+  .box-title{font-size:0.72rem;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;
+    color:var(--ink-soft);margin:14px 0 6px}
+  sub,sup{font-size:.72em}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  footer{margin-top:22px;font-size:0.8rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:10px}
+
+  @media (max-width:600px){
+    .frame{padding:14px 12px 36px}
+    header{gap:10px;margin-bottom:12px}
+    h1{font-size:1.2rem}
+    header p{font-size:0.84rem;flex-basis:100%;order:3}
+    .layout{gap:12px}
+    .card{padding:12px}
+    button.act{padding:9px 14px;font-size:0.88rem}
+    .drop{font-size:1.3rem;padding:0 6px}
+    label.check{padding:7px 0;font-size:0.9rem}
+    label.check input{width:18px;height:18px}
+    .charge input[type=range]{height:26px}
+    .coords input[type=number]{width:72px;padding:5px 6px;font-size:0.85rem}
+    .readout{font-size:0.75rem}
+    .readout .eq{font-size:0.84rem}
+    .hint{font-size:0.72rem}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1 id="t-title">Electric Field Explorer</h1>
+    <p id="t-sub">Drag the test point to probe the field. Drag charges to rearrange them.</p>
+    <div class="lang">
+      <button id="lang-en" aria-pressed="true">EN</button>
+      <button id="lang-es" aria-pressed="false">ES</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <canvas id="sim"></canvas>
+      <div class="hint" id="t-hint">Click anywhere to move the test point</div>
+    </div>
+
+    <div class="rail">
+      <div class="card">
+        <h2 id="t-analysis">Field at the test point</h2>
+        <div class="fbd-wrap"><canvas id="fbd"></canvas></div>
+        <div class="readout" id="readout"></div>
+      </div>
+
+      <div class="card probe-card">
+        <h2 id="t-probe">Test point</h2>
+        <div class="probe-row" style="margin-bottom:8px">
+          <span data-i18n="probeCharge">Test charge q₀</span>
+        </div>
+        <div class="probe-row">
+          <input type="range" id="probe-q" min="-5" max="5" step="0.5" value="1">
+          <input type="number" id="probe-q-num" step="0.5" value="1" style="width:60px">
+          <span>µC</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 id="t-charges">Charges</h2>
+        <div id="charge-list"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="act" id="add-pos">+ q</button>
+          <button class="act" id="add-neg">− q</button>
+          <button class="act" id="fit" data-i18n="fit">Fit view</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 id="t-display">What to show</h2>
+        <label class="check"><input type="checkbox" id="c-grid" checked><span data-i18n="c-grid">Field vectors</span></label>
+        <label class="check"><input type="checkbox" id="c-lines"><span data-i18n="c-lines">Field lines</span></label>
+        <label class="check"><input type="checkbox" id="c-probe" checked><span data-i18n="c-probe">Vector at test point</span></label>
+        <div class="scale-row">
+          <span data-i18n="scale">Vector density</span>
+          <input type="range" id="density" min="0.6" max="1.8" step="0.1" value="1">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 id="t-setups">Setups</h2>
+        <div class="row">
+          <button class="act" data-preset="single" data-i18n="p-single">Single charge</button>
+          <button class="act" data-preset="dipole" data-i18n="p-dipole">Dipole</button>
+          <button class="act" data-preset="like" data-i18n="p-like">Two positives</button>
+          <button class="act" data-preset="quad" data-i18n="p-quad">Quadrupole</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="t-foot">Charges in microcoulombs (1 µC = 10⁻⁶ C), positions in metres. E = kq/r², field lines point from + to −. k = 8.99 × 10⁹ N·m²/C².</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const K = 8.9875517923e9;
+const MAX_COORD = 5;
+let ASPECT = 0.62;
+const isSmall = () => (canvas.parentElement.clientWidth || 800) < 560;
+const view = {cx:0.20, cy:0.0, span:1.0};
+let S = 1, DPR = 1;
+
+const canvas = document.getElementById("sim");
+const ctx = canvas.getContext("2d");
+const fbd = document.getElementById("fbd");
+const fctx = fbd.getContext("2d");
+
+let charges = [];
+let probe = {x:0.55, y:0.20};
+let probeQ = 1;                      // µC, the test charge's own charge
+let dragging = null;                 // "probe" | charge index | null
+let dragDX = 0, dragDY = 0, dragMoved = false;
+
+const opts = {grid:true, lines:false, probeVec:true, density:1};
+
+const PRESETS = {
+  single:  [{q: 4.0, x:0.0, y:0.0}],
+  dipole:  [{q: 4.0, x:-0.20, y:0.0},{q:-4.0, x:0.20, y:0.0}],
+  like:    [{q: 3.0, x:-0.20, y:0.0},{q: 3.0, x:0.20, y:0.0}],
+  quad:    [{q: 3.0, x:-0.22, y:-0.16},{q:-3.0, x:0.22, y:-0.16},
+            {q: 3.0, x:0.22, y:0.16},{q:-3.0, x:-0.22, y:0.16}]
+};
+function loadPreset(name){
+  charges = PRESETS[name].map(c => ({q:c.q, x:c.x, y:c.y}));
+  probe = {x: 0.55, y: 0.20};
+  fitView(); renderList(); draw();
+}
+
+/* ---------- language ---------- */
+const STR = {
+  en:{
+    title:"Electric Field Explorer",
+    sub:"Drag the test point to probe the field. Drag charges to rearrange them.",
+    hint:"Click anywhere to move the test point",
+    analysis:"Field at the test point", probe:"Test point", charges:"Charges", display:"What to show", setups:"Setups",
+    fit:"Fit view", probeCharge:"Test charge q₀",
+    "c-grid":"Field vectors","c-lines":"Field lines","c-probe":"Vector at test point","scale":"Vector density",
+    "p-single":"Single charge","p-dipole":"Dipole","p-like":"Two positives","p-quad":"Quadrupole",
+    foot:"Charges in microcoulombs (1 µC = 10⁻⁶ C), positions in metres. E = kq/r², field lines point from + to −. k = 8.99 × 10⁹ N·m²/C².",
+    remove:"Remove", empty:"Add at least one charge to see a field.",
+    source:"Source", netTotal:"Net", above:"above the +x axis", below:"below the +x axis",
+    fieldAt:"Field at P", forceOn:"Force on q₀ at P", noForce:"Set a nonzero test charge to see the force it would feel here.",
+    sameDir:"This force points in the same direction as E, because q₀ is positive.",
+    oppDir:"This force points opposite to E, because q₀ is negative."
+  },
+  es:{
+    title:"Explorador de Campo Eléctrico",
+    sub:"Arrastra el punto de prueba para sondear el campo. Arrastra las cargas para reacomodarlas.",
+    hint:"Haz clic en cualquier lugar para mover el punto de prueba",
+    analysis:"Campo en el punto de prueba", probe:"Punto de prueba", charges:"Cargas", display:"Qué mostrar", setups:"Configuraciones",
+    fit:"Reencuadrar", probeCharge:"Carga de prueba q₀",
+    "c-grid":"Vectores de campo","c-lines":"Líneas de campo","c-probe":"Vector en el punto de prueba","scale":"Densidad de vectores",
+    "p-single":"Una carga","p-dipole":"Dipolo","p-like":"Dos positivas","p-quad":"Cuadrupolo",
+    foot:"Cargas en microcoulombs (1 µC = 10⁻⁶ C), posiciones en metros. E = kq/r², las líneas de campo van de + a −. k = 8.99 × 10⁹ N·m²/C².",
+    remove:"Eliminar", empty:"Agrega al menos una carga para ver un campo.",
+    source:"Origen", netTotal:"Neto", above:"sobre el eje +x", below:"bajo el eje +x",
+    fieldAt:"Campo en P", forceOn:"Fuerza sobre q₀ en P", noForce:"Define una carga de prueba distinta de cero para ver la fuerza que sentiría aquí.",
+    sameDir:"Esta fuerza apunta en la misma dirección que E, porque q₀ es positiva.",
+    oppDir:"Esta fuerza apunta en dirección opuesta a E, porque q₀ es negativa."
+  }
+};
+let lang = "en";
+const T = k => STR[lang][k] || k;
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.getElementById("t-title").textContent = T("title");
+  document.getElementById("t-sub").textContent = T("sub");
+  document.getElementById("t-hint").textContent = T("hint");
+  document.getElementById("t-analysis").textContent = T("analysis");
+  document.getElementById("t-probe").textContent = T("probe");
+  document.getElementById("t-charges").textContent = T("charges");
+  document.getElementById("t-display").textContent = T("display");
+  document.getElementById("t-setups").textContent = T("setups");
+  document.getElementById("t-foot").textContent = T("foot");
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = T(el.dataset.i18n));
+  document.getElementById("lang-en").setAttribute("aria-pressed", lang === "en");
+  document.getElementById("lang-es").setAttribute("aria-pressed", lang === "es");
+  renderList(); draw();
+}
+
+/* ---------- physics ---------- */
+function fieldAt(x, y){
+  let ex = 0, ey = 0;
+  for (const c of charges){
+    const dx = x - c.x, dy = y - c.y;
+    const r2 = dx*dx + dy*dy;
+    if (r2 < 1e-6) return null;
+    const r = Math.sqrt(r2);
+    const e = K*(c.q*1e-6)/r2;
+    ex += e*dx/r; ey += e*dy/r;
+  }
+  return {ex, ey};
+}
+function fieldFrom(c, x, y){
+  const dx = x - c.x, dy = y - c.y;
+  let r2 = dx*dx + dy*dy;
+  const rTrue = Math.sqrt(r2);
+  const rmin = 0.012;
+  if (r2 < rmin*rmin) r2 = rmin*rmin;
+  const r = Math.sqrt(r2);
+  const e = K*(c.q*1e-6)/r2;
+  return {ex: e*dx/r, ey: e*dy/r, r: rTrue};
+}
+
+/* ---------- formatting ---------- */
+function fmtField(n){
+  const a = Math.abs(n);
+  if (a === 0) return "0";
+  if (a >= 1e9) return (n/1e9).toFixed(2) + " GN/C";
+  if (a >= 1e6) return (n/1e6).toFixed(2) + " MN/C";
+  if (a >= 1e3) return (n/1e3).toFixed(2) + " kN/C";
+  if (a >= 1)   return n.toFixed(1) + " N/C";
+  return n.toExponential(2) + " N/C";
+}
+function fmtForce(n){
+  const a = Math.abs(n);
+  if (a === 0) return "0 N";
+  if (a >= 1)     return n.toFixed(3) + " N";
+  if (a >= 1e-3)  return (n*1e3).toFixed(2) + " mN";
+  return (n*1e6).toFixed(1) + " \u00b5N";
+}
+function angDeg(fx, fy){ let a = Math.atan2(fy, fx)*180/Math.PI; if (a < 0) a += 360; return a; }
+function frac(numHtml, denHtml){
+  return '<span class="frac"><span class="num">' + numHtml + '</span><span class="den">' + denHtml + '</span></span>';
+}
+
+/* ---------- view mapping ---------- */
+function resize(){
+  const w = canvas.parentElement.clientWidth;
+  ASPECT = w < 560 ? 0.95 : (w < 780 ? 0.76 : 0.62);
+  const h = Math.round(w*ASPECT);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  canvas.style.height = h + "px";
+  DPR = dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S = w/view.span;
+  resizeFBD();
+  draw();
+}
+function resizeFBD(){
+  const w = fbd.parentElement.clientWidth || 300;
+  const h = Math.round(w*(w < 320 ? 0.95 : 0.78));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  fbd.width = Math.round(w*dpr); fbd.height = Math.round(h*dpr);
+  fbd.style.height = h + "px";
+  fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+const cw = () => canvas.width/DPR;
+const chh = () => canvas.height/DPR;
+const sx = x => cw()/2 + (x - view.cx)*S;
+const sy = y => chh()/2 - (y - view.cy)*S;
+const mx = p => view.cx + (p - cw()/2)/S;
+const my = p => view.cy - (p - chh()/2)/S;
+
+function fitView(){
+  let xmin=0, xmax=0, ymin=0, ymax=0;
+  const pts = [...charges, probe];
+  for (const c of pts){
+    xmin = Math.min(xmin, c.x); xmax = Math.max(xmax, c.x);
+    ymin = Math.min(ymin, c.y); ymax = Math.max(ymax, c.y);
+  }
+  const w = xmax-xmin, h = ymax-ymin;
+  view.span = Math.max(0.30, w*1.5, (h*1.5)/ASPECT);
+  view.cx = (xmin+xmax)/2; view.cy = (ymin+ymax)/2;
+  S = cw()/view.span;
+}
+function fitIfNeeded(){
+  const padX = view.span*0.08, padY = view.span*ASPECT*0.08;
+  const left = view.cx-view.span/2+padX, right = view.cx+view.span/2-padX;
+  const bottom = view.cy-view.span*ASPECT/2+padY, top = view.cy+view.span*ASPECT/2-padY;
+  let out = 0 < left || 0 > right || 0 < bottom || 0 > top;
+  for (const c of [...charges, probe]){
+    if (c.x < left || c.x > right || c.y < bottom || c.y > top){ out = true; break; }
+  }
+  if (out) fitView();
+}
+const radiusPx = c => 9 + Math.min(13, Math.abs(c.q)*1.5);
+
+/* ---------- drawing helpers ---------- */
+function arrow(x1,y1,x2,y2,color,width,dashed){
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+  if (len < 3) return;
+  const head = Math.min(12, len*0.35);
+  const ux=dx/len, uy=dy/len;
+  const bx=x2-ux*head, by=y2-uy*head;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=width; ctx.lineCap="round";
+  if (dashed) ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(bx-uy*head*0.38, by+ux*head*0.38);
+  ctx.lineTo(bx+uy*head*0.38, by-ux*head*0.38);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+const NICE = [0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000];
+function gridStep(){ for (const s of NICE) if (s*S >= 52) return s; return NICE[NICE.length-1]; }
+
+function drawGrid(){
+  const step = gridStep();
+  const xmin=mx(0), xmax=mx(cw()), ymin=my(chh()), ymax=my(0);
+  const dec = step<0.01?3:(step<0.1?2:(step<1?2:(step<10?1:0)));
+  ctx.save();
+  const minor = step/5;
+  ctx.strokeStyle="#E9EEF2"; ctx.lineWidth=1;
+  for (let m=Math.ceil(xmin/minor)*minor; m<=xmax; m+=minor){
+    const p=Math.round(sx(m))+.5; ctx.beginPath(); ctx.moveTo(p,0); ctx.lineTo(p,chh()); ctx.stroke();
+  }
+  for (let m=Math.ceil(ymin/minor)*minor; m<=ymax; m+=minor){
+    const p=Math.round(sy(m))+.5; ctx.beginPath(); ctx.moveTo(0,p); ctx.lineTo(cw(),p); ctx.stroke();
+  }
+  ctx.strokeStyle="#D7E0E7";
+  for (let m=Math.ceil(xmin/step)*step; m<=xmax; m+=step){
+    const p=Math.round(sx(m))+.5; ctx.beginPath(); ctx.moveTo(p,0); ctx.lineTo(p,chh()); ctx.stroke();
+  }
+  for (let m=Math.ceil(ymin/step)*step; m<=ymax; m+=step){
+    const p=Math.round(sy(m))+.5; ctx.beginPath(); ctx.moveTo(0,p); ctx.lineTo(cw(),p); ctx.stroke();
+  }
+  const x0=sx(0), y0=sy(0);
+  ctx.strokeStyle="#16202B"; ctx.fillStyle="#16202B"; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(cw(),y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0,0); ctx.lineTo(x0,chh()); ctx.stroke();
+  arrow(cw()-26,y0,cw()-10,y0,"#16202B",1.6,false);
+  arrow(x0,26,x0,10,"#16202B",1.6,false);
+  ctx.font = '500 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
+  ctx.textAlign="left";
+  ctx.fillText("x", cw()-20, y0+18);
+  ctx.fillText("y", x0+8, 18);
+  ctx.fillText("O", x0-16, y0+16);
+  ctx.font = (isSmall()?9:10) + 'px "IBM Plex Mono", monospace';
+  ctx.fillStyle="#5A6B79"; ctx.strokeStyle="#5A6B79"; ctx.lineWidth=1;
+  ctx.textAlign="center";
+  for (let m=Math.ceil(xmin/step)*step; m<=xmax; m+=step){
+    if (Math.abs(m) < step/100) continue;
+    const p=sx(m); ctx.beginPath(); ctx.moveTo(p,y0-4); ctx.lineTo(p,y0+4); ctx.stroke();
+    ctx.fillText(m.toFixed(dec), p, y0+16);
+  }
+  ctx.textAlign="right";
+  for (let m=Math.ceil(ymin/step)*step; m<=ymax; m+=step){
+    if (Math.abs(m) < step/100) continue;
+    const p=sy(m); ctx.beginPath(); ctx.moveTo(x0-4,p); ctx.lineTo(x0+4,p); ctx.stroke();
+    ctx.fillText(m.toFixed(dec), x0-8, p+3);
+  }
+  ctx.restore();
+}
+
+function fieldRefMag(){
+  const maxQ = Math.max(0.5, ...charges.map(c => Math.abs(c.q)));
+  const typicalR = Math.max(0.05, view.span*0.18);
+  return K*(maxQ*1e-6)/(typicalR*typicalR);
+}
+function drawFieldGrid(){
+  if (!charges.length) return;
+  const ref = fieldRefMag();
+  const step = Math.max(24, Math.min(52, (cw()/16)/opts.density));
+  const maxLen = step*0.62;
+  for (let X = step*0.7; X < cw(); X += step){
+    for (let Y = step*0.7; Y < chh(); Y += step){
+      const E = fieldAt(mx(X), my(Y));
+      if (!E) continue;
+      const mag = Math.hypot(E.ex, E.ey);
+      if (mag < ref*0.002) continue;
+      const t = mag/(mag+ref);
+      const len = 5 + t*(maxLen-5);
+      const alpha = 0.28 + t*0.55;
+      const ux = E.ex/mag, uy = -E.ey/mag;
+      arrow(X-ux*len*0.15, Y-uy*len*0.15, X+ux*len*0.85, Y+uy*len*0.85,
+            "rgba(60,110,158," + alpha.toFixed(2) + ")", 1.6, false);
+    }
+  }
+}
+
+function traceFieldLines(){
+  const positives = charges.filter(c => c.q > 0);
+  if (!positives.length) return [];
+  const lines = [];
+  const stepLen = Math.max(view.span*0.006, 0.002);
+  const startR = Math.max(view.span*0.012, 0.006);
+  const boundX = view.span*1.15, boundY = view.span*ASPECT*1.15;
+  for (const c of positives){
+    const n = Math.max(5, Math.min(16, Math.round(5*Math.sqrt(Math.abs(c.q)))));
+    for (let k = 0; k < n; k++){
+      const theta = (2*Math.PI*k)/n + 0.0173;
+      let x = c.x + startR*Math.cos(theta), y = c.y + startR*Math.sin(theta);
+      const pts = [[x,y]];
+      for (let step = 0; step < 900; step++){
+        const E = fieldAt(x, y);
+        if (!E) break;
+        const mag = Math.hypot(E.ex, E.ey);
+        if (mag < 1e-6) break;
+        x += (E.ex/mag)*stepLen; y += (E.ey/mag)*stepLen;
+        pts.push([x,y]);
+        let absorbed = false;
+        for (const c2 of charges){
+          if (c2 === c) continue;
+          if (Math.hypot(x-c2.x, y-c2.y) < startR*1.4){ absorbed = true; break; }
+        }
+        if (absorbed) break;
+        if (Math.abs(x-view.cx) > boundX || Math.abs(y-view.cy) > boundY) break;
+      }
+      lines.push(pts);
+    }
+  }
+  return lines;
+}
+function drawFieldLines(){
+  const lines = traceFieldLines();
+  ctx.save();
+  ctx.strokeStyle = "rgba(90,107,121,.55)"; ctx.lineWidth = 1.3; ctx.lineJoin = "round";
+  for (const pts of lines){
+    if (pts.length < 2) continue;
+    ctx.beginPath(); ctx.moveTo(sx(pts[0][0]), sy(pts[0][1]));
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(sx(pts[i][0]), sy(pts[i][1]));
+    ctx.stroke();
+    const mid = Math.floor(pts.length*0.42);
+    if (mid > 0 && mid < pts.length-1){
+      const a = pts[mid], b = pts[mid+1];
+      arrow(sx(a[0]), sy(a[1]), sx(b[0]), sy(b[1]), "rgba(90,107,121,.75)", 1.3, false);
+    }
+  }
+  ctx.restore();
+}
+
+function drawCharge(c){
+  const x=sx(c.x), y=sy(c.y), r=radiusPx(c);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle = c.q>=0 ? "#C2352B" : "#1E5FA8"; ctx.fill();
+  ctx.lineWidth=1.5; ctx.strokeStyle="#16202B"; ctx.stroke();
+  ctx.strokeStyle="#fff"; ctx.lineWidth=2.2; ctx.lineCap="round";
+  ctx.beginPath();
+  ctx.moveTo(x-r*0.45,y); ctx.lineTo(x+r*0.45,y);
+  if (c.q>=0){ ctx.moveTo(x,y-r*0.45); ctx.lineTo(x,y+r*0.45); }
+  ctx.stroke();
+  ctx.fillStyle="#16202B"; ctx.font = '500 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
+  ctx.textAlign="left";
+  ctx.fillText("q = " + (c.q>0?"+":"") + c.q.toFixed(1) + " \u00b5C", x+r+6, y-r-2);
+  ctx.restore();
+}
+
+function drawProbe(E){
+  const x = sx(probe.x), y = sy(probe.y);
+  let drewE = false, drewF = false;
+
+  if (opts.probeVec && E){
+    const mag = Math.hypot(E.ex, E.ey);
+    if (mag > 0){
+      const ref = fieldRefMag();
+      const t = mag/(mag+ref);
+      const len = Math.min(cw(), chh())*0.22*(0.35+0.65*t);
+      const ux = E.ex/mag, uy = -E.ey/mag;
+
+      // Offset E and F perpendicular to their common line of action so both stay visible
+      // even when they point the same way (positive test charge) or exactly opposite
+      // (negative test charge) — the two textbook cases this diagram exists to show.
+      const px = -uy, py = ux;                 // unit perpendicular
+      const offset = Math.abs(probeQ) > 1e-9 ? 5 : 0;
+
+      arrow(x+px*offset, y+py*offset, x+px*offset+ux*len, y+py*offset+uy*len, "#B5760F", 3, false);
+      drewE = true;
+
+      if (Math.abs(probeQ) > 1e-9){
+        const sign = probeQ > 0 ? 1 : -1;       // force is q0·E: flips direction when q0 < 0
+        const flen = len*0.82;
+        arrow(x-px*offset, y-py*offset, x-px*offset+ux*sign*flen, y-py*offset+uy*sign*flen,
+              "#A0338A", 3, false);
+        drewF = true;
+      }
+    }
+  }
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI*2);
+  ctx.fillStyle = "#fff"; ctx.fill();
+  ctx.lineWidth = 2.4; ctx.strokeStyle = "#B5760F"; ctx.stroke();
+  ctx.strokeStyle = "#B5760F"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x-5,y); ctx.lineTo(x+5,y); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5);
+  ctx.stroke();
+  ctx.fillStyle = "#16202B"; ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
+  ctx.textAlign = "left";
+  ctx.fillText("P", x+10, y-8);
+  ctx.restore();
+
+  if (drewE || drewF) drawProbeLegend(drewE, drewF);
+}
+
+// Small fixed legend, top-right of the main canvas, so the amber/violet arrows are
+// always identifiable regardless of where the probe currently sits.
+function drawProbeLegend(showE, showF){
+  const items = [];
+  if (showE) items.push({label:"E", color:"#B5760F"});
+  if (showF) items.push({label:"F on q\u2080", color:"#A0338A"});
+  if (!items.length) return;
+  ctx.save();
+  ctx.font = '600 ' + (isSmall()?10:11) + 'px "IBM Plex Mono", monospace';
+  let w = 16;
+  const widths = items.map(it => { const tw = ctx.measureText(it.label).width; w += 20+tw+14; return tw; });
+  w -= 14;
+  const h = 24, x0 = cw()-w-10, y0 = 10;
+  ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.strokeStyle = "#E2E9EE"; ctx.lineWidth = 1;
+  ctx.fillRect(x0, y0, w, h); ctx.strokeRect(x0+.5, y0+.5, w, h);
+  let x = x0+10;
+  items.forEach((it, i) => {
+    ctx.strokeStyle = it.color; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y0+h/2); ctx.lineTo(x+16, y0+h/2); ctx.stroke();
+    ctx.fillStyle = "#16202B"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(it.label, x+22, y0+h/2+1);
+    x += 22+widths[i]+14;
+  });
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+
+
+function draw(){
+  ctx.clearRect(0, 0, cw(), chh());
+  drawGrid();
+  if (opts.lines) drawFieldLines();
+  if (opts.grid) drawFieldGrid();
+  charges.forEach(drawCharge);
+  const E = fieldAt(probe.x, probe.y);
+  drawProbe(E);
+  drawFBD(E);
+  updateReadout(E);
+}
+
+/* ---------- inset: field vectors at the probe, isolated ---------- */
+function farrow(x1,y1,x2,y2,color,width,dashed){
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+  if (len < 3) return;
+  const head = Math.min(11, len*0.32);
+  const ux=dx/len, uy=dy/len;
+  const bx=x2-ux*head, by=y2-uy*head;
+  fctx.save();
+  fctx.strokeStyle=color; fctx.fillStyle=color; fctx.lineWidth=width; fctx.lineCap="round";
+  if (dashed) fctx.setLineDash([5,4]);
+  fctx.beginPath(); fctx.moveTo(x1,y1); fctx.lineTo(bx,by); fctx.stroke();
+  fctx.setLineDash([]);
+  fctx.beginPath(); fctx.moveTo(x2,y2);
+  fctx.lineTo(bx-uy*head*0.36, by+ux*head*0.36);
+  fctx.lineTo(bx+uy*head*0.36, by-ux*head*0.36);
+  fctx.closePath(); fctx.fill();
+  fctx.restore();
+}
+function drawFBD(E){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = fbd.width/dpr, H = fbd.height/dpr;
+  if (!W || !H) return;
+  fctx.clearRect(0, 0, W, H);
+  if (!charges.length){
+    fctx.fillStyle = "#5A6B79"; fctx.font = '11px "IBM Plex Sans", sans-serif'; fctx.textAlign = "left";
+    fctx.fillText(T("empty"), 10, H/2);
+    return;
+  }
+
+  const legendRowsGuess = charges.length > 4 ? 2 : 1;
+  const plotH = H - (legendRowsGuess*16 + 6);
+  const ox = W/2, oy = Math.max(28, plotH/2);
+  const Lmax = Math.min(W*0.42, plotH*0.42);
+
+  const parts = charges.map(c => ({c, ...fieldFrom(c, probe.x, probe.y)}));
+  const nmag = E ? Math.hypot(E.ex, E.ey) : 0;
+  const maxMag = Math.max(nmag, ...parts.map(p => Math.hypot(p.ex, p.ey)), 1e-30);
+  const L = m => (m/maxMag)*Lmax;
+
+  fctx.save();
+  fctx.strokeStyle = "#D7E0E7"; fctx.lineWidth = 1; fctx.setLineDash([4,4]);
+  fctx.beginPath(); fctx.moveTo(12, oy); fctx.lineTo(W-12, oy);
+  fctx.moveTo(ox, 12); fctx.lineTo(ox, plotH-6); fctx.stroke();
+  fctx.setLineDash([]);
+  fctx.fillStyle = "#A9B7C2"; fctx.font = '10px "IBM Plex Mono", monospace';
+  fctx.textAlign = "left";
+  fctx.fillText("+x", W-24, oy-6); fctx.fillText("+y", ox+6, 20);
+  fctx.restore();
+
+  const legend = [];
+  parts.forEach((p, idx) => {
+    const mag = Math.hypot(p.ex, p.ey);
+    const len = L(mag);
+    const col = p.c.q >= 0 ? "#C2352B" : "#1E5FA8";
+    legend.push({label:"E" + (idx+1), value: fmtField(mag), color: col, dashed:false});
+    if (len < 2) return;
+    const ux = p.ex/mag, uy = -p.ey/mag;
+    farrow(ox, oy, ox+ux*len, oy+uy*len, col, 2.4, false);
+  });
+  if (nmag > 0){
+    const len = L(nmag), ux = E.ex/nmag, uy = -E.ey/nmag;
+    farrow(ox, oy, ox+ux*len, oy+uy*len, "#12705A", 3.0, true);
+    legend.push({label:"\u03A3E", value: fmtField(nmag), color:"#12705A", dashed:true});
+  }
+
+  fctx.save();
+  fctx.font = '600 10px "IBM Plex Mono", monospace';
+  const padX=10, gap=16, swatch=14, rowH=16;
+  const rows=[[]]; let rowW=padX, rowIdx=0;
+  legend.forEach(item => {
+    const text = item.label + " " + item.value;
+    const w = swatch+4+fctx.measureText(text).width;
+    if (rowW+w+gap > W-padX && rows[rowIdx].length){ rows.push([]); rowIdx++; rowW=padX; }
+    rows[rowIdx].push({...item, text, w}); rowW += w+gap;
+  });
+  const legendH = rows.length*rowH+6;
+  fctx.fillStyle = "rgba(255,255,255,.94)";
+  fctx.fillRect(0, H-legendH, W, legendH);
+  fctx.strokeStyle = "#E2E9EE"; fctx.lineWidth = 1;
+  fctx.beginPath(); fctx.moveTo(0, H-legendH+.5); fctx.lineTo(W, H-legendH+.5); fctx.stroke();
+  rows.forEach((row, r) => {
+    let x = padX; const y = H-legendH+6+r*rowH+rowH/2;
+    row.forEach(item => {
+      if (item.dashed){
+        fctx.strokeStyle=item.color; fctx.lineWidth=2; fctx.setLineDash([3,2]);
+        fctx.beginPath(); fctx.moveTo(x,y); fctx.lineTo(x+swatch,y); fctx.stroke();
+        fctx.setLineDash([]);
+      } else {
+        fctx.fillStyle=item.color; fctx.fillRect(x,y-2,swatch,4);
+      }
+      fctx.fillStyle="#16202B"; fctx.textAlign="left"; fctx.textBaseline="middle";
+      fctx.fillText(item.text, x+swatch+4, y+1);
+      x += item.w+gap;
+    });
+  });
+  fctx.textBaseline = "alphabetic";
+  fctx.restore();
+
+  fctx.save();
+  fctx.beginPath(); fctx.arc(ox, oy, 8, 0, Math.PI*2);
+  fctx.fillStyle = "#fff"; fctx.fill();
+  fctx.lineWidth = 2.2; fctx.strokeStyle = "#B5760F"; fctx.stroke();
+  fctx.strokeStyle = "#B5760F"; fctx.lineWidth = 1.6; fctx.lineCap = "round";
+  fctx.beginPath();
+  fctx.moveTo(ox-4,oy); fctx.lineTo(ox+4,oy); fctx.moveTo(ox,oy-4); fctx.lineTo(ox,oy+4);
+  fctx.stroke();
+  fctx.restore();
+
+  fctx.save();
+  fctx.font = '600 11px "IBM Plex Sans", sans-serif';
+  fctx.fillStyle = "#16202B"; fctx.textAlign = "left";
+  fctx.fillText(T("fieldAt"), 10, 16);
+  fctx.restore();
+}
+
+/* ---------- analysis panel ---------- */
+function updateReadout(E){
+  const box = document.getElementById("readout");
+  if (!charges.length){ box.innerHTML = '<span class="muted">' + T("empty") + '</span>'; return; }
+
+  let html = '<div class="eq"><strong>' + T("fieldAt") + '</strong><br>' +
+             '<span style="font-size:1.05em">E = k ' + frac('q','r\u00b2') + '</span></div>';
+  html += '<div class="tablewrap"><table><tr><th>' + T("source") + '</th><th>r (m)</th><th>E</th>' +
+          '<th>E<sub>x</sub></th><th>E<sub>y</sub></th></tr>';
+  charges.forEach((c, idx) => {
+    const f = fieldFrom(c, probe.x, probe.y);
+    html += '<tr><td>q' + (idx+1) + '</td><td>' + f.r.toFixed(3) + '</td><td>' +
+            fmtField(Math.hypot(f.ex, f.ey)) + '</td><td>' + fmtField(f.ex) + '</td><td>' + fmtField(f.ey) + '</td></tr>';
+  });
+  const mag = E ? Math.hypot(E.ex, E.ey) : 0;
+  html += '<tr class="total"><td>' + T("netTotal") + '</td><td></td><td>' + fmtField(mag) +
+          '</td><td>' + fmtField(E?E.ex:0) + '</td><td>' + fmtField(E?E.ey:0) + '</td></tr></table></div>';
+
+  if (mag > 0 && E){
+    const a = angDeg(E.ex, E.ey);
+    const signed = a > 180 ? a - 360 : a;
+    html += '<div class="result-box">' +
+              '<div class="rline"><span class="rlabel">|E| = \u221a(E<sub>x</sub>\u00b2 + E<sub>y</sub>\u00b2)</span>' +
+                '<span class="rval">' + fmtField(mag) + '</span></div>' +
+              '<div class="rline"><span class="rlabel">\u03b8 = arctan' + frac('E<sub>y</sub>','E<sub>x</sub>') + '</span>' +
+                '<span class="rval">' + signed.toFixed(1) + '\u00b0</span></div>' +
+            '</div>' +
+            '<div class="angle-note">' + (signed >= 0 ? T("above") : T("below")) + '</div>';
+
+    html += '<div class="box-title">' + T("forceOn") + '</div>';
+    if (Math.abs(probeQ) > 1e-9){
+      const Fx = probeQ*1e-6*E.ex, Fy = probeQ*1e-6*E.ey;
+      const Fmag = Math.hypot(Fx, Fy);
+      html += '<div class="eq" style="margin-bottom:6px">F = q<sub>0</sub>E</div>' +
+              '<div class="result-box force">' +
+                '<div class="rline"><span class="rlabel">|F|</span><span class="rval">' + fmtForce(Fmag) + '</span></div>' +
+              '</div>' +
+              '<div class="angle-note">' + (probeQ > 0 ? T("sameDir") : T("oppDir")) + '</div>';
+    } else {
+      html += '<div class="muted" style="font-size:0.78rem">' + T("noForce") + '</div>';
+    }
+  }
+  box.innerHTML = html;
+}
+
+/* ---------- charge list ---------- */
+function renderList(){
+  const list = document.getElementById("charge-list");
+  list.innerHTML = "";
+  charges.forEach((c, i) => {
+    const div = document.createElement("div");
+    div.className = "charge" + (c.q < 0 ? " neg" : "");
+    const top = document.createElement("div");
+    top.className = "charge-top";
+    const name = document.createElement("span");
+    name.className = "charge-name";
+    name.textContent = "q" + (i+1) + "  " + (c.q>0?"+":"") + c.q.toFixed(1) + " \u00b5C";
+    const del = document.createElement("button");
+    del.className = "drop"; del.textContent = "\u00d7";
+    del.setAttribute("aria-label", T("remove") + " q" + (i+1));
+    del.onclick = () => { charges.splice(i,1); renderList(); draw(); };
+    top.append(name, del);
+
+    const slider = document.createElement("input");
+    slider.type = "range"; slider.min = "-10"; slider.max = "10"; slider.step = "0.5"; slider.value = c.q;
+    slider.oninput = e => {
+      let v = parseFloat(e.target.value); if (v === 0) v = 0.5;
+      c.q = v;
+      div.className = "charge" + (c.q < 0 ? " neg" : "");
+      name.textContent = "q" + (i+1) + "  " + (c.q>0?"+":"") + c.q.toFixed(1) + " \u00b5C";
+      draw();
+    };
+
+    const coords = document.createElement("div");
+    coords.className = "coords";
+    const xin = document.createElement("input");
+    xin.type = "number"; xin.step = "0.01"; xin.inputMode = "decimal"; xin.value = c.x.toFixed(2);
+    const yin = document.createElement("input");
+    yin.type = "number"; yin.step = "0.01"; yin.inputMode = "decimal"; yin.value = c.y.toFixed(2);
+    xin.oninput = () => { const v = parseFloat(xin.value); if (!isNaN(v)){ c.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, v)); fitIfNeeded(); draw(); } };
+    yin.oninput = () => { const v = parseFloat(yin.value); if (!isNaN(v)){ c.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, v)); fitIfNeeded(); draw(); } };
+    coords.append("x", xin, "y", yin, "m");
+    c._xin = xin; c._yin = yin;
+
+    div.append(top, slider, coords);
+    list.appendChild(div);
+  });
+  const full = charges.length >= 6;
+  document.getElementById("add-pos").disabled = full;
+  document.getElementById("add-neg").disabled = full;
+}
+function syncCoordInputs(){
+  charges.forEach(c => {
+    if (c._xin && document.activeElement !== c._xin) c._xin.value = c.x.toFixed(2);
+    if (c._yin && document.activeElement !== c._yin) c._yin.value = c.y.toFixed(2);
+  });
+}
+function addCharge(sign){
+  if (charges.length >= 6) return;
+  const w = view.span*0.30, h = view.span*ASPECT*0.30;
+  charges.push({q: sign*3, x: view.cx + (Math.random()*2-1)*w, y: view.cy + (Math.random()*2-1)*h});
+  fitIfNeeded(); renderList(); draw();
+}
+
+/* ---------- pointer interaction ---------- */
+function pointerPos(e){
+  const rect = canvas.getBoundingClientRect();
+  return {x: mx(e.clientX-rect.left), y: my(e.clientY-rect.top)};
+}
+canvas.addEventListener("pointerdown", e => {
+  const p = pointerPos(e);
+  const slop = (e.pointerType === "touch") ? 18 : 8;
+  if (Math.hypot(p.x-probe.x, p.y-probe.y) < (10+slop)/S){
+    dragging = "probe"; dragDX = probe.x-p.x; dragDY = probe.y-p.y; dragMoved = false;
+    canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+    return;
+  }
+  for (let i = charges.length-1; i >= 0; i--){
+    const c = charges[i];
+    if (Math.hypot(p.x-c.x, p.y-c.y) < (radiusPx(c)+slop)/S){
+      dragging = i; dragDX = c.x-p.x; dragDY = c.y-p.y; dragMoved = false;
+      canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+      return;
+    }
+  }
+  probe.x = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.x));
+  probe.y = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.y));
+  dragging = "probe"; dragDX = 0; dragDY = 0; dragMoved = true;
+  canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+  fitIfNeeded(); draw();
+});
+canvas.addEventListener("pointermove", e => {
+  if (dragging === null) return;
+  const p = pointerPos(e);
+  const nx = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.x+dragDX));
+  const ny = Math.max(-MAX_COORD, Math.min(MAX_COORD, p.y+dragDY));
+  if (dragging === "probe"){
+    if (Math.hypot(nx-probe.x, ny-probe.y) > 0.002) dragMoved = true;
+    probe.x = nx; probe.y = ny;
+  } else {
+    const c = charges[dragging];
+    if (Math.hypot(nx-c.x, ny-c.y) > 0.002) dragMoved = true;
+    c.x = nx; c.y = ny;
+    syncCoordInputs();
+  }
+  fitIfNeeded();
+  draw();
+});
+function endDrag(){ if (dragging === null) return; dragging = null; canvas.classList.remove("dragging"); draw(); }
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+/* ---------- wiring ---------- */
+document.getElementById("c-grid").onchange = e => { opts.grid = e.target.checked; draw(); };
+document.getElementById("c-lines").onchange = e => { opts.lines = e.target.checked; draw(); };
+document.getElementById("c-probe").onchange = e => { opts.probeVec = e.target.checked; draw(); };
+document.getElementById("density").oninput = e => { opts.density = parseFloat(e.target.value); draw(); };
+document.getElementById("add-pos").onclick = () => addCharge(1);
+document.getElementById("add-neg").onclick = () => addCharge(-1);
+document.getElementById("fit").onclick = () => { fitView(); draw(); };
+document.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => loadPreset(b.dataset.preset));
+document.getElementById("lang-en").onclick = () => { lang = "en"; applyLang(); };
+document.getElementById("lang-es").onclick = () => { lang = "es"; applyLang(); };
+
+const probeQSlider = document.getElementById("probe-q");
+const probeQNum = document.getElementById("probe-q-num");
+probeQSlider.oninput = () => { probeQ = parseFloat(probeQSlider.value); probeQNum.value = probeQ; draw(); };
+probeQNum.oninput = () => {
+  const v = parseFloat(probeQNum.value);
+  if (!isNaN(v)){ probeQ = Math.max(-5, Math.min(5, v)); probeQSlider.value = probeQ; draw(); }
+};
+
+window.addEventListener("resize", () => { resize(); fitIfNeeded(); draw(); });
+window.addEventListener("orientationchange", () => setTimeout(() => { resize(); fitView(); draw(); }, 250));
+
+loadPreset("dipole");
+applyLang();
+resize();
+})();
+</script>
+</body>
+</html>
