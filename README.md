@@ -11,6 +11,8 @@ dependencies, nothing to install.
 | Topic | Simulation | Folder |
 |---|---|---|
 | Electricity | Coulomb's Law — Force Vector Explorer | [`coulomb-law/`](coulomb-law/) |
+| Electricity | Electric Field Explorer | [`electric-field/`](electric-field/) |
+| Electricity | Parallel Plates — Uniform Field | [`parallel-plates/`](parallel-plates/) |
 
 ## Adding a new simulation
 
@@ -28,7 +30,11 @@ dependencies, nothing to install.
 /
 ├── index.html          landing page listing every simulation
 ├── README.md
-└── coulomb-law/
+├── coulomb-law/
+│   └── index.html
+├── electric-field/
+│   └── index.html
+└── parallel-plates/
     └── index.html
 ```
 
