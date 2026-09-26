@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electric Current &amp; Ohm's Law Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F4; --panel:#FFFFFF; --ink:#16202B; --ink-soft:#5A6B79;
+    --rule:#C8D3DC; --conv:#C2352B; --elec:#1E5FA8; --wire:#3C4A56; --resistor:#8A5A2B; --focus:#D98B00;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:15px;line-height:1.5}
+  .frame{max-width:1200px;margin:0 auto;padding:24px 20px 48px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
+  h1{font-size:1.45rem;font-weight:600;margin:0;letter-spacing:-0.01em}
+  header p{margin:0;color:var(--ink-soft);font-size:0.9rem;flex:1 1 220px}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+  .stage{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:3px}
+  canvas{display:block;width:100%;height:auto;border-radius:3px}
+  .hint{position:absolute;left:12px;top:10px;font-size:0.78rem;color:var(--ink-soft);
+    background:rgba(255,255,255,.85);padding:2px 8px;border-radius:2px;pointer-events:none;max-width:70%}
+
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:14px}
+  .card h2{font-size:0.82rem;font-weight:600;margin:0 0 10px;color:var(--ink-soft);
+    letter-spacing:0.02em;border-bottom:1px solid var(--rule);padding-bottom:6px}
+
+  .battery-card{border-left:4px solid var(--conv)}
+  .wire-card{border-left:4px solid var(--resistor)}
+  .display-card{border-left:4px solid var(--elec)}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .field{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:0.85rem;margin-bottom:8px}
+  .field:last-child{margin-bottom:0}
+  .field label{flex:0 0 84px;color:var(--ink-soft)}
+  .field input[type=range]{flex:1;accent-color:var(--ink)}
+  .field input[type=number]{width:64px;font:inherit;font-size:0.82rem;padding:3px 5px;
+    border:1px solid var(--rule);border-radius:2px}
+  .field select{font:inherit;font-size:0.82rem;padding:4px 6px;border:1px solid var(--rule);
+    border-radius:2px;background:#fff;color:var(--ink);flex:1}
+  .field .unit{color:var(--ink-soft);font-size:0.8rem;min-width:28px}
+
+  button.act{font:inherit;font-size:0.85rem;padding:6px 12px;border:1px solid var(--ink);
+    background:var(--panel);color:var(--ink);border-radius:2px;cursor:pointer}
+  button.act:hover{background:var(--ink);color:#fff}
+  button.act[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+  label.check{display:flex;align-items:center;gap:8px;font-size:0.87rem;padding:4px 0;cursor:pointer}
+  label.check input{accent-color:var(--ink);width:15px;height:15px}
+  .radio-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+  .radio-row label{display:flex;align-items:center;gap:8px;font-size:0.87rem;cursor:pointer;padding:3px 0}
+  .radio-row input{accent-color:var(--ink)}
+
+  .readout{font-family:"IBM Plex Mono",monospace;font-size:0.8rem}
+  .readout .eq{font-size:0.88rem;margin-bottom:8px;line-height:1.8}
+  .readout .step{margin-bottom:14px}
+  .readout .step:last-child{margin-bottom:0}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
+    margin:0 3px;line-height:1.15;font-size:0.92em}
+  .frac .num{padding:0 2px}
+  .frac .den{padding:0 2px;border-top:1.4px solid var(--ink)}
+  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;
+    padding:10px 12px;margin-top:6px}
+  .result-box .rline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .result-box .rline + .rline{margin-top:4px}
+  .result-box .rlabel{color:var(--ink-soft);font-size:0.76rem}
+  .result-box .rval{font-weight:600;font-size:0.98rem}
+  .note{color:var(--ink-soft);font-size:0.74rem;margin-top:6px;line-height:1.5}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:0.78rem;margin-top:10px;color:var(--ink-soft)}
+  .legend span.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  sub,sup{font-size:.72em}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  footer{margin-top:22px;font-size:0.78rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:10px}
+  footer a{color:var(--ink-soft)}
+
+  @media (max-width:600px){
+    .frame{padding:14px 12px 36px}
+    header{gap:10px;margin-bottom:12px}
+    h1{font-size:1.2rem}
+    header p{font-size:0.84rem;flex-basis:100%;order:3}
+    .layout{gap:12px}
+    .card{padding:12px}
+    button.act{padding:9px 14px;font-size:0.88rem}
+    .field label{flex-basis:70px}
+    .readout{font-size:0.75rem}
+    .readout .eq{font-size:0.84rem}
+    .hint{font-size:0.72rem}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1>Electric Current &amp; Ohm's Law Explorer</h1>
+    <p>Watch charge carriers move around a simple circuit, then see how voltage, resistance, and wire geometry set the current.</p>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <canvas id="sim"></canvas>
+      <div class="hint">Conventional current vs. electron flow — same wire, opposite directions</div>
+    </div>
+
+    <div class="rail">
+      <div class="card battery-card">
+        <h2>Battery</h2>
+        <div class="field">
+          <label for="volt">Voltage</label>
+          <input type="range" id="volt" min="0.05" max="24" step="0.05" value="12">
+          <input type="number" id="volt-num" step="0.05" value="12" style="width:64px">
+          <span class="unit">V</span>
+        </div>
+      </div>
+
+      <div class="card wire-card">
+        <h2>Wire / Resistor</h2>
+        <div class="field">
+          <label for="material">Material</label>
+          <select id="material"></select>
+        </div>
+        <div class="field">
+          <label for="length">Length</label>
+          <input type="range" id="length" min="0.01" max="5" step="0.01" value="1">
+          <input type="number" id="length-num" step="0.01" value="1" style="width:60px">
+          <span class="unit">m</span>
+        </div>
+        <div class="field">
+          <label for="diam">Diameter</label>
+          <input type="range" id="diam" min="0.05" max="10" step="0.01" value="2.05">
+          <input type="number" id="diam-num" step="0.01" value="2.05" style="width:60px">
+          <span class="unit">mm</span>
+        </div>
+      </div>
+
+      <div class="card display-card">
+        <h2>What to show</h2>
+        <div class="radio-row" id="direction-group">
+          <label><input type="radio" name="dir" value="conv" checked> Conventional current (+ → −)</label>
+          <label><input type="radio" name="dir" value="elec"> Electron flow (− → +)</label>
+        </div>
+        <label class="check"><input type="checkbox" id="realistic"><span>Realistic drift speed (very slow!)</span></label>
+      </div>
+
+      <div class="card">
+        <h2>Setups</h2>
+        <div class="row">
+          <button class="act" data-preset="starter">Truck starter</button>
+          <button class="act" data-preset="calculator">Calculator circuit</button>
+          <button class="act" data-preset="household">12-gauge household wire</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Analysis</h2>
+        <div class="readout" id="readout"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Assumes one free electron per atom (as in the textbook's copper example) to estimate free-electron density n from each material's density and molar mass. Concepts and worked examples based on
+    <a href="https://openstax.org/books/college-physics-2e/pages/20-introduction-to-electric-current-resistance-and-ohms-law" target="_blank" rel="noopener">OpenStax College Physics 2e, Ch. 20</a>.
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const NA = 6.02214076e23;      // Avogadro's number, 1/mol
+const E_CHARGE = 1.602176634e-19; // C
+
+// Resistivity (Ω·m) from OpenStax Table 20.1; density and molar mass used to
+// estimate free-electron density n, assuming one free electron per atom —
+// the same simplifying assumption the textbook uses for its copper example.
+const MATERIALS = [
+  {key:"copper",   name:"Copper",   rho:1.72e-8, density:8.80e3,  molarMass:63.55},
+  {key:"silver",   name:"Silver",   rho:1.59e-8, density:10.49e3, molarMass:107.87},
+  {key:"gold",     name:"Gold",     rho:2.44e-8, density:19.30e3, molarMass:196.97},
+  {key:"aluminum", name:"Aluminum", rho:2.65e-8, density:2.70e3,  molarMass:26.98},
+  {key:"tungsten", name:"Tungsten", rho:5.6e-8,  density:19.30e3, molarMass:183.84},
+  {key:"iron",     name:"Iron",     rho:9.71e-8, density:7.87e3,  molarMass:55.85},
+  {key:"platinum", name:"Platinum", rho:10.6e-8, density:21.45e3, molarMass:195.08},
+  {key:"lead",     name:"Lead",     rho:22e-8,   density:11.34e3, molarMass:207.2}
+];
+function freeElectronDensity(m){ return (m.density*1000/m.molarMass)*NA; } // electrons / m^3
+
+/* ---------- state ---------- */
+let V = 12;             // volts
+let matIdx = 0;
+let L = 1.0;            // metres
+let D_mm = 2.05;         // mm
+let direction = "conv";  // "conv" | "elec"
+let realistic = false;
+
+const canvas = document.getElementById("sim");
+const ctx = canvas.getContext("2d");
+let DPR = 1, ASPECT = 0.56;
+const isSmall = () => (canvas.parentElement.clientWidth || 800) < 560;
+
+/* ---------- physics ---------- */
+function compute(){
+  const m = MATERIALS[matIdx];
+  const D = D_mm/1000;
+  const A = Math.PI*(D/2)*(D/2);
+  const R = m.rho*L/A;
+  const I = V/R;
+  const n = freeElectronDensity(m);
+  const vd = I/(n*E_CHARGE*A);
+  const driftTime = L/vd;              // s, time for a carrier to cross the whole length
+  const signalTime = L/1e8;            // s, at the ~10^8 m/s signal speed the text quotes
+  return {m, D, A, R, I, n, vd, driftTime, signalTime};
+}
+
+/* ---------- formatting ---------- */
+function fmtSI(n, unit, digits){
+  digits = digits || 3;
+  const a = Math.abs(n);
+  if (a === 0) return "0 " + unit;
+  const exp = Math.floor(Math.log10(a));
+  if (exp >= -2 && exp < 3) return n.toFixed(Math.max(0, digits-1-exp)) + " " + unit;
+  const mant = n/Math.pow(10, exp);
+  return mant.toFixed(digits-1) + "\u00d710<sup>" + exp + "</sup> " + unit;
+}
+function fmtTime(s){
+  if (s < 1e-6) return fmtSI(s, "s");
+  if (s < 1)    return fmtSI(s, "s");
+  if (s < 60)   return s.toFixed(2) + " s";
+  if (s < 3600) return (s/60).toFixed(1) + " min";
+  if (s < 86400) return (s/3600).toFixed(1) + " hr";
+  return (s/86400).toFixed(1) + " days";
+}
+function frac(numHtml, denHtml){
+  return '<span class="frac"><span class="num">' + numHtml + '</span><span class="den">' + denHtml + '</span></span>';
+}
+
+/* ---------- canvas ---------- */
+function resize(){
+  const w = canvas.parentElement.clientWidth;
+  ASPECT = w < 560 ? 0.72 : 0.56;
+  const h = Math.round(w*ASPECT);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  canvas.style.height = h + "px";
+  DPR = dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+const cw = () => canvas.width/DPR;
+const chh = () => canvas.height/DPR;
+
+// Rectangular loop path, parametrized by t in [0,1), traversed clockwise.
+// Battery sits on the left edge, resistor zigzag on the top edge.
+function loopGeometry(){
+  const W = cw(), H = chh();
+  const mx = W*0.14, my = H*0.16;
+  const x0 = mx, x1 = W-mx, y0 = my, y1 = H-my;
+  const top = 2*(x1-x0), right = 2*(y1-y0);
+  const perim = 2*top + 2*right; // top+bottom equal, left+right equal → simplifies below
+  const wTop = x1-x0, wSide = y1-y0;
+  const total = 2*wTop + 2*wSide;
+  return {x0, x1, y0, y1, wTop, wSide, total};
+}
+function pointOnLoop(t){
+  const g = loopGeometry();
+  let d = ((t%1)+1)%1 * g.total;
+  if (d < g.wTop){                                   // top edge, left -> right
+    return {x: g.x0+d, y: g.y0, edge:"top"};
+  }
+  d -= g.wTop;
+  if (d < g.wSide){                                  // right edge, top -> bottom
+    return {x: g.x1, y: g.y0+d, edge:"right"};
+  }
+  d -= g.wSide;
+  if (d < g.wTop){                                   // bottom edge, right -> left
+    return {x: g.x1-d, y: g.y1, edge:"bottom"};
+  }
+  d -= g.wTop;
+  return {x: g.x0, y: g.y1-d, edge:"left"};           // left edge, bottom -> top
+}
+
+function drawBattery(g){
+  const midY = (g.y0+g.y1)/2;
+  const x = g.x0;
+  ctx.save();
+  ctx.strokeStyle = "#16202B"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+  // long thin line (+) above centre, short thick line (−) below centre
+  ctx.beginPath(); ctx.moveTo(x-16, midY-10); ctx.lineTo(x+16, midY-10); ctx.stroke();
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(x-10, midY+10); ctx.lineTo(x+10, midY+10); ctx.stroke();
+  ctx.fillStyle = "#C2352B"; ctx.font = '600 13px "IBM Plex Mono", monospace'; ctx.textAlign="center";
+  ctx.fillText("+", x, midY-20);
+  ctx.fillStyle = "#1E5FA8";
+  ctx.fillText("\u2212", x, midY+30);
+  ctx.restore();
+}
+function drawResistor(g){
+  const y = g.y0, x0 = g.x0+g.wTop*0.28, x1 = g.x0+g.wTop*0.72;
+  const zigH = 10, teeth = 7;
+  ctx.save();
+  ctx.strokeStyle = "#8A5A2B"; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x0, y);
+  const step = (x1-x0)/teeth;
+  for (let i = 0; i < teeth; i++){
+    const xm = x0 + step*(i+0.5);
+    ctx.lineTo(xm, y + (i%2===0 ? -zigH : zigH));
+  }
+  ctx.lineTo(x1, y);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawWireLoop(g){
+  ctx.save();
+  ctx.strokeStyle = "#3C4A56"; ctx.lineWidth = 2.2; ctx.lineJoin = "round";
+  ctx.strokeRect(g.x0, g.y0, g.x1-g.x0, g.y1-g.y0);
+  ctx.restore();
+}
+function drawArrow(x, y, ux, uy, color){
+  const len = 9;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.translate(x, y);
+  ctx.rotate(Math.atan2(uy, ux));
+  ctx.beginPath();
+  ctx.moveTo(len, 0); ctx.lineTo(-len*0.5, len*0.5); ctx.lineTo(-len*0.5, -len*0.5);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function edgeTangent(edge, sign){
+  // unit tangent for each edge when travelling with increasing t (clockwise); sign flips for electron flow
+  let ux=0, uy=0;
+  if (edge === "top") { ux=1; uy=0; }
+  else if (edge === "right"){ ux=0; uy=1; }
+  else if (edge === "bottom"){ ux=-1; uy=0; }
+  else { ux=0; uy=-1; }
+  return {ux: ux*sign, uy: uy*sign};
+}
+
+let phase = 0, lastT = null;
+const N_DOTS = 14;
+
+function draw(){
+  const W = cw(), H = chh();
+  ctx.clearRect(0, 0, W, H);
+  const g = loopGeometry();
+
+  drawWireLoop(g);
+  drawResistor(g);
+  drawBattery(g);
+
+  // static direction arrows at a few fixed points, independent of the animated dots
+  const sign = direction === "conv" ? 1 : -1;
+  const arrowColor = direction === "conv" ? "#C2352B" : "#1E5FA8";
+  [0.12, 0.37, 0.62, 0.87].forEach(t => {
+    const p = pointOnLoop(t);
+    const tan = edgeTangent(p.edge, sign);
+    drawArrow(p.x, p.y, tan.ux, tan.uy, arrowColor);
+  });
+
+  // moving charge carriers
+  const dotColor = direction === "conv" ? "#C2352B" : "#1E5FA8";
+  for (let i = 0; i < N_DOTS; i++){
+    const t = (i/N_DOTS + phase*sign) % 1;
+    const p = pointOnLoop(((t%1)+1)%1);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, isSmall()?3.4:4, 0, Math.PI*2);
+    ctx.fillStyle = dotColor;
+    ctx.fill();
+  }
+
+  // live values near the components
+  const r = compute();
+  ctx.save();
+  ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
+  ctx.fillStyle = "#16202B"; ctx.textAlign = "left";
+  ctx.fillText("V = " + V.toFixed(2) + " V", g.x0-6, g.y1+ (isSmall()?26:30));
+  ctx.textAlign = "center";
+  ctx.fillText("R = " + fmtNum(r.R) + " \u03a9", (g.x0+g.x1)/2, g.y0-16);
+  ctx.textAlign = "right";
+  ctx.fillText("I = " + fmtNum(r.I) + " A", g.x1+6, g.y1+ (isSmall()?26:30));
+  ctx.restore();
+
+  // legend
+  ctx.save();
+  ctx.font = '500 ' + (isSmall()?10:11) + 'px "IBM Plex Mono", monospace';
+  ctx.textAlign = "left"; ctx.fillStyle = "#5A6B79";
+  const label = direction === "conv" ? "conventional current (+ charge carriers)" : "electron flow (e\u207b, actual carriers in a metal)";
+  ctx.fillText(label, 10, H-10);
+  ctx.restore();
+}
+function fmtNum(n){
+  const a = Math.abs(n);
+  if (a === 0) return "0";
+  if (a >= 1000 || a < 0.01) return n.toExponential(2);
+  return n.toPrecision(3);
+}
+
+function animate(ts){
+  if (lastT === null) lastT = ts;
+  const dt = Math.min(0.05, (ts-lastT)/1000);
+  lastT = ts;
+
+  const r = compute();
+  let speed; // fraction of the loop per second
+  if (realistic){
+    // true drift speed mapped onto the schematic loop: phase covers the wire's
+    // actual length L once per (L / vd) seconds — this is the "almost frozen" case.
+    speed = (r.vd > 0) ? (1/r.driftTime) : 0;
+  } else {
+    // exaggerated but current-dependent, so a bigger I always animates faster
+    const ref = 5; // amps, a comfortable reference scale
+    const t = r.I/(r.I+ref);
+    speed = 0.06 + 0.5*t;
+  }
+  phase += speed*dt;
+  draw();
+  requestAnimationFrame(animate);
+}
+
+/* ---------- analysis panel ---------- */
+function updateReadout(){
+  const r = compute();
+  const box = document.getElementById("readout");
+  let html = "";
+
+  html += '<div class="step"><div class="eq"><strong>Resistance</strong><br>' +
+          'R = ' + frac('\u03c1L','A') + '</div>' +
+          '<div class="result-box"><div class="rline"><span class="rlabel">' +
+          '(' + r.m.rho.toExponential(2) + ' \u03a9\u00b7m)(' + L.toFixed(2) + ' m) / ' +
+          r.A.toExponential(2) + ' m\u00b2</span></div>' +
+          '<div class="rline"><span class="rlabel">R</span><span class="rval">' + fmtSI(r.R, "\u03a9") + '</span></div></div></div>';
+
+  html += '<div class="step"><div class="eq"><strong>Ohm\u2019s law</strong><br>' +
+          'I = ' + frac('V','R') + '</div>' +
+          '<div class="result-box"><div class="rline"><span class="rlabel">' +
+          V.toFixed(2) + ' V / ' + fmtSI(r.R,"\u03a9") + '</span></div>' +
+          '<div class="rline"><span class="rlabel">I</span><span class="rval">' + fmtSI(r.I, "A") + '</span></div></div></div>';
+
+  html += '<div class="step"><div class="eq"><strong>Drift velocity</strong><br>' +
+          'v<sub>d</sub> = ' + frac('I','nqA') + '</div>' +
+          '<div class="note">n = ' + fmtSI(r.n, "electrons/m\u00b3") + ' (one free electron per ' + r.m.name.toLowerCase() + ' atom)</div>' +
+          '<div class="result-box"><div class="rline"><span class="rlabel">v<sub>d</sub></span><span class="rval">' + fmtSI(r.vd, "m/s") + '</span></div></div></div>';
+
+  html += '<div class="step"><div class="eq"><strong>Drift time vs. signal time</strong></div>' +
+          '<div class="result-box"><div class="rline"><span class="rlabel">Time for one carrier to cross this wire</span><span class="rval">' + fmtTime(r.driftTime) + '</span></div>' +
+          '<div class="rline"><span class="rlabel">Time for the signal to cross it (~10\u2078 m/s)</span><span class="rval">' + fmtTime(r.signalTime) + '</span></div></div>' +
+          '<div class="note">The current turns on almost instantly even though each individual charge crawls along \u2014 a change in the electric field propagates the length of the wire long before any single electron gets there.</div></div>';
+
+  box.innerHTML = html;
+}
+
+/* ---------- UI wiring ---------- */
+const materialSel = document.getElementById("material");
+MATERIALS.forEach((m, i) => {
+  const opt = document.createElement("option");
+  opt.value = i; opt.textContent = m.name;
+  materialSel.appendChild(opt);
+});
+materialSel.onchange = () => { matIdx = parseInt(materialSel.value, 10); updateReadout(); };
+
+function bindPair(rangeId, numId, min, max, onSet){
+  const range = document.getElementById(rangeId), num = document.getElementById(numId);
+  range.oninput = () => { const v = parseFloat(range.value); num.value = v; onSet(v); updateReadout(); };
+  num.oninput = () => {
+    let v = parseFloat(num.value);
+    if (isNaN(v)) return;
+    v = Math.max(min, Math.min(max, v));
+    range.value = v; onSet(v); updateReadout();
+  };
+}
+bindPair("volt", "volt-num", 0.05, 24, v => { V = v; });
+bindPair("length", "length-num", 0.01, 5, v => { L = v; });
+bindPair("diam", "diam-num", 0.05, 10, v => { D_mm = v; });
+
+document.querySelectorAll('input[name="dir"]').forEach(r => {
+  r.onchange = () => { direction = document.querySelector('input[name="dir"]:checked').value; };
+});
+document.getElementById("realistic").onchange = e => { realistic = e.target.checked; };
+
+function setInputs(){
+  document.getElementById("volt").value = V; document.getElementById("volt-num").value = V;
+  document.getElementById("length").value = L; document.getElementById("length-num").value = L;
+  document.getElementById("diam").value = D_mm; document.getElementById("diam-num").value = D_mm;
+  materialSel.value = matIdx;
+}
+
+const PRESETS = {
+  starter:    {matIdx:0, L:0.50, D_mm:0.405, V:12},
+  calculator: {matIdx:0, L:5.0,  D_mm:0.05, V:1.5},
+  household:  {matIdx:0, L:1.00, D_mm:2.053, V:0.1039}
+};
+document.querySelectorAll("[data-preset]").forEach(b => {
+  b.onclick = () => {
+    const p = PRESETS[b.dataset.preset];
+    matIdx = p.matIdx; L = p.L; D_mm = p.D_mm; V = p.V;
+    setInputs(); updateReadout();
+  };
+});
+
+window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => setTimeout(resize, 250));
+
+setInputs();
+updateReadout();
+resize();
+requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
