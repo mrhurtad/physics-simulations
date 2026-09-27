@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Electric Current &amp; Ohm's Law Explorer</title>
+<title>Circuit Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#EEF1F4; --panel:#FFFFFF; --ink:#16202B; --ink-soft:#5A6B79;
-    --rule:#C8D3DC; --conv:#C2352B; --elec:#1E5FA8; --wire:#3C4A56; --resistor:#8A5A2B; --focus:#D98B00;
+    --rule:#C8D3DC; --conv:#C2352B; --elec:#1E5FA8; --wire:#3C4A56;
+    --resistor:#8A5A2B; --cap:#12705A; --bulb:#E0A21B; --focus:#D98B00;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -22,63 +23,65 @@
     border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
   h1{font-size:1.45rem;font-weight:600;margin:0;letter-spacing:-0.01em}
   header p{margin:0;color:var(--ink-soft);font-size:0.9rem;flex:1 1 220px}
+  header a{color:var(--ink-soft);font-size:0.85rem}
 
-  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
   @media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+  .leftcol{display:flex;flex-direction:column;gap:14px;min-width:0}
 
   .stage{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:3px}
-  canvas{display:block;width:100%;height:auto;border-radius:3px}
+  canvas{display:block;width:100%;height:auto;border-radius:3px;touch-action:none}
   .hint{position:absolute;left:12px;top:10px;font-size:0.78rem;color:var(--ink-soft);
-    background:rgba(255,255,255,.85);padding:2px 8px;border-radius:2px;pointer-events:none;max-width:70%}
+    background:rgba(255,255,255,.9);padding:2px 8px;border-radius:2px;pointer-events:none;max-width:85%}
+  .warn{position:absolute;right:12px;bottom:12px;left:12px;font-size:0.84rem;color:#fff;background:var(--conv);
+    padding:6px 10px;border-radius:3px;display:none}
+  .info{position:absolute;right:12px;bottom:12px;left:12px;font-size:0.82rem;color:var(--ink);background:#FDF5E2;
+    border:1px solid #EBD9A8;padding:6px 10px;border-radius:3px;display:none}
 
   .rail{display:flex;flex-direction:column;gap:14px}
   .card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:14px}
   .card h2{font-size:0.82rem;font-weight:600;margin:0 0 10px;color:var(--ink-soft);
     letter-spacing:0.02em;border-bottom:1px solid var(--rule);padding-bottom:6px}
-
-  .battery-card{border-left:4px solid var(--conv)}
-  .wire-card{border-left:4px solid var(--resistor)}
+  .tool-card{border-left:4px solid var(--ink)}
+  .sel-card{border-left:4px solid var(--focus)}
+  .tmpl-card{border-left:4px solid var(--resistor)}
   .display-card{border-left:4px solid var(--elec)}
 
+  .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .tools button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:0.74rem}
+  .tools svg{width:34px;height:20px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
-  .field{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:0.85rem;margin-bottom:8px}
-  .field:last-child{margin-bottom:0}
-  .field label{flex:0 0 84px;color:var(--ink-soft)}
-  .field input[type=range]{flex:1;accent-color:var(--ink)}
-  .field input[type=number]{width:64px;font:inherit;font-size:0.82rem;padding:3px 5px;
-    border:1px solid var(--rule);border-radius:2px}
-  .field select{font:inherit;font-size:0.82rem;padding:4px 6px;border:1px solid var(--rule);
-    border-radius:2px;background:#fff;color:var(--ink);flex:1}
-  .field .unit{color:var(--ink-soft);font-size:0.8rem;min-width:28px}
+
+  .field{display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:0.85rem;margin:8px 0}
+  .field label{flex:0 0 74px;color:var(--ink-soft)}
+  .field input[type=range]{flex:1;accent-color:var(--ink);min-width:0}
+  .field input[type=number]{width:70px;font:inherit;font-size:0.82rem;padding:3px 5px;border:1px solid var(--rule);border-radius:2px}
+  .field .unit{color:var(--ink-soft);font-size:0.8rem;min-width:24px}
 
   button.act{font:inherit;font-size:0.85rem;padding:6px 12px;border:1px solid var(--ink);
     background:var(--panel);color:var(--ink);border-radius:2px;cursor:pointer}
   button.act:hover{background:var(--ink);color:#fff}
   button.act[aria-pressed="true"]{background:var(--ink);color:#fff}
+  button.act:hover svg *, button.act[aria-pressed="true"] svg *{stroke:#fff}
+  button.danger{border-color:var(--conv);color:var(--conv)}
+  button.danger:hover{background:var(--conv);color:#fff}
 
-  label.check{display:flex;align-items:center;gap:8px;font-size:0.87rem;padding:4px 0;cursor:pointer}
+  label.check{display:flex;align-items:center;gap:8px;font-size:0.87rem;padding:3px 0;cursor:pointer}
   label.check input{accent-color:var(--ink);width:15px;height:15px}
-  .radio-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
-  .radio-row label{display:flex;align-items:center;gap:8px;font-size:0.87rem;cursor:pointer;padding:3px 0}
+  .radio-row{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+  .radio-row label{display:flex;align-items:center;gap:8px;font-size:0.87rem;cursor:pointer;padding:2px 0}
   .radio-row input{accent-color:var(--ink)}
 
   .readout{font-family:"IBM Plex Mono",monospace;font-size:0.8rem}
-  .readout .eq{font-size:0.88rem;margin-bottom:8px;line-height:1.8}
-  .readout .step{margin-bottom:14px}
-  .readout .step:last-child{margin-bottom:0}
-  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;
-    margin:0 3px;line-height:1.15;font-size:0.92em}
-  .frac .num{padding:0 2px}
-  .frac .den{padding:0 2px;border-top:1.4px solid var(--ink)}
-  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;
-    padding:10px 12px;margin-top:6px}
+  .readout .note{font-family:"IBM Plex Sans",sans-serif}
+  .result-box{background:#F6F3EA;border:1px solid #E7DFC8;border-radius:3px;padding:10px 12px;margin-top:8px}
   .result-box .rline{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .result-box .rline + .rline{margin-top:4px}
-  .result-box .rlabel{color:var(--ink-soft);font-size:0.76rem}
-  .result-box .rval{font-weight:600;font-size:0.98rem}
-  .note{color:var(--ink-soft);font-size:0.74rem;margin-top:6px;line-height:1.5}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:0.78rem;margin-top:10px;color:var(--ink-soft)}
-  .legend span.sw{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .result-box .rlabel{color:var(--ink-soft);font-size:0.78rem}
+  .result-box .rval{font-weight:600;font-size:0.95rem}
+  .note{color:var(--ink-soft);font-size:0.78rem;margin-top:8px;line-height:1.5}
+  .empty{color:var(--ink-soft);font-size:0.85rem}
+  .sel-title{font-weight:600;font-size:0.95rem}
   sub,sup{font-size:.72em}
   :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
   footer{margin-top:22px;font-size:0.78rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:10px}
@@ -91,10 +94,7 @@
     header p{font-size:0.84rem;flex-basis:100%;order:3}
     .layout{gap:12px}
     .card{padding:12px}
-    button.act{padding:9px 14px;font-size:0.88rem}
-    .field label{flex-basis:70px}
-    .readout{font-size:0.75rem}
-    .readout .eq{font-size:0.84rem}
+    button.act{padding:8px 12px;font-size:0.88rem}
     .hint{font-size:0.72rem}
   }
 </style>
@@ -102,75 +102,70 @@
 <body>
 <div class="frame">
   <header>
-    <h1>Electric Current &amp; Ohm's Law Explorer</h1>
-    <p>Watch charge carriers move around a simple circuit, then see how voltage, resistance, and wire geometry set the current.</p>
+    <h1>Circuit Builder</h1>
+    <p>Build any circuit you like with batteries, resistors, bulbs, capacitors and switches. The simulation solves it live and shows the current in every wire.</p>
+    <a href="../electric-current/">&larr; Electric current explorer</a>
   </header>
 
   <div class="layout">
-    <div class="stage">
-      <canvas id="sim"></canvas>
-      <div class="hint">Conventional current vs. electron flow — same wire, opposite directions</div>
+    <div class="leftcol">
+      <div class="stage">
+        <canvas id="board"></canvas>
+        <div class="hint" id="hint">Pick a part, then click or tap between two dots to place it. Drag to draw several wires.</div>
+        <div class="warn" id="warn"></div>
+        <div class="info" id="info"></div>
+      </div>
+      <div class="stage" id="graph-wrap" style="display:none">
+        <canvas id="graph"></canvas>
+      </div>
     </div>
 
     <div class="rail">
-      <div class="card battery-card">
-        <h2>Battery</h2>
-        <div class="field">
-          <label for="volt">Voltage</label>
-          <input type="range" id="volt" min="0.05" max="24" step="0.05" value="12">
-          <input type="number" id="volt-num" step="0.05" value="12" style="width:64px">
-          <span class="unit">V</span>
-        </div>
+      <div class="card tool-card">
+        <h2>Toolbox</h2>
+        <div class="tools" id="tools"></div>
       </div>
 
-      <div class="card wire-card">
-        <h2>Wire / Resistor</h2>
-        <div class="field">
-          <label for="material">Material</label>
-          <select id="material"></select>
-        </div>
-        <div class="field">
-          <label for="length">Length</label>
-          <input type="range" id="length" min="0.01" max="5" step="0.01" value="1">
-          <input type="number" id="length-num" step="0.01" value="1" style="width:60px">
-          <span class="unit">m</span>
-        </div>
-        <div class="field">
-          <label for="diam">Diameter</label>
-          <input type="range" id="diam" min="0.05" max="10" step="0.01" value="2.05">
-          <input type="number" id="diam-num" step="0.01" value="2.05" style="width:60px">
-          <span class="unit">mm</span>
+      <div class="card sel-card">
+        <h2>Selected part</h2>
+        <div id="sel"></div>
+      </div>
+
+      <div class="card tmpl-card">
+        <h2>Start from a circuit</h2>
+        <div class="row">
+          <button class="act" data-tmpl="series">Series</button>
+          <button class="act" data-tmpl="parallel">Parallel</button>
+          <button class="act" data-tmpl="combo">Series + parallel</button>
+          <button class="act" data-tmpl="bulbs">Bulbs: series vs. parallel</button>
+          <button class="act" data-tmpl="rc">RC: charge &amp; discharge</button>
+          <button class="act danger" data-tmpl="clear">Clear board</button>
         </div>
       </div>
 
       <div class="card display-card">
-        <h2>What to show</h2>
-        <div class="radio-row" id="direction-group">
-          <label><input type="radio" name="dir" value="conv" checked> Conventional current (+ → −)</label>
-          <label><input type="radio" name="dir" value="elec"> Electron flow (− → +)</label>
+        <h2>Display</h2>
+        <div class="radio-row">
+          <label><input type="radio" name="dir" value="conv" checked> Conventional current (+ &rarr; &minus;)</label>
+          <label><input type="radio" name="dir" value="elec"> Electron flow (&minus; &rarr; +)</label>
         </div>
-        <label class="check"><input type="checkbox" id="realistic"><span>Realistic drift speed (very slow!)</span></label>
-      </div>
-
-      <div class="card">
-        <h2>Setups</h2>
-        <div class="row">
-          <button class="act" data-preset="starter">Truck starter</button>
-          <button class="act" data-preset="calculator">Calculator circuit</button>
-          <button class="act" data-preset="household">12-gauge household wire</button>
+        <label class="check"><input type="checkbox" id="show-i" checked><span>Show current next to each part</span></label>
+        <label class="check"><input type="checkbox" id="show-v"><span>Show voltage across each part</span></label>
+        <div class="row" style="margin-top:8px">
+          <button class="act" id="discharge">Discharge all capacitors</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>Analysis</h2>
-        <div class="readout" id="readout"></div>
+        <h2>Circuit</h2>
+        <div class="readout" id="summary"></div>
       </div>
     </div>
   </div>
 
   <footer>
-    Assumes one free electron per atom (as in the textbook's copper example) to estimate free-electron density n from each material's density and molar mass. Concepts and worked examples based on
-    <a href="https://openstax.org/books/college-physics-2e/pages/20-introduction-to-electric-current-resistance-and-ohms-law" target="_blank" rel="noopener">OpenStax College Physics 2e, Ch. 20</a>.
+    Batteries are ideal except for a 1 m&Omega; internal resistance, and wires have 0.1 m&Omega;, so a short circuit shows up as an enormous current instead of breaking the solver. Circuits are solved with nodal analysis; capacitors are stepped in time every 2 ms. Concepts from
+    <a href="https://openstax.org/books/college-physics-2e/pages/21-introduction-to-circuits-bioelectricity-and-dc-instruments" target="_blank" rel="noopener">OpenStax College Physics 2e, Ch. 21</a>.
   </footer>
 </div>
 
@@ -178,344 +173,615 @@
 (function(){
 "use strict";
 
-const NA = 6.02214076e23;      // Avogadro's number, 1/mol
-const E_CHARGE = 1.602176634e-19; // C
+/* ================= constants ================= */
+const COLS = 6, ROWS = 4;                   // grid cells
+const NN = (COLS+1)*(ROWS+1);               // grid nodes
+const R_WIRE = 1e-4, R_BATT = 1e-3, GMIN = 1e-9;
+const DT = 0.002;                           // s, capacitor time step
+const COL = {ink:"#16202B", soft:"#5A6B79", rule:"#C8D3DC", wire:"#3C4A56", res:"#8A5A2B",
+             cap:"#12705A", bulb:"#E0A21B", conv:"#C2352B", elec:"#1E5FA8", focus:"#D98B00"};
 
-// Resistivity (Ω·m) from OpenStax Table 20.1; density and molar mass used to
-// estimate free-electron density n, assuming one free electron per atom —
-// the same simplifying assumption the textbook uses for its copper example.
-const MATERIALS = [
-  {key:"copper",   name:"Copper",   rho:1.72e-8, density:8.80e3,  molarMass:63.55},
-  {key:"silver",   name:"Silver",   rho:1.59e-8, density:10.49e3, molarMass:107.87},
-  {key:"gold",     name:"Gold",     rho:2.44e-8, density:19.30e3, molarMass:196.97},
-  {key:"aluminum", name:"Aluminum", rho:2.65e-8, density:2.70e3,  molarMass:26.98},
-  {key:"tungsten", name:"Tungsten", rho:5.6e-8,  density:19.30e3, molarMass:183.84},
-  {key:"iron",     name:"Iron",     rho:9.71e-8, density:7.87e3,  molarMass:55.85},
-  {key:"platinum", name:"Platinum", rho:10.6e-8, density:21.45e3, molarMass:195.08},
-  {key:"lead",     name:"Lead",     rho:22e-8,   density:11.34e3, molarMass:207.2}
-];
-function freeElectronDensity(m){ return (m.density*1000/m.molarMass)*NA; } // electrons / m^3
-
-/* ---------- state ---------- */
-let V = 12;             // volts
-let matIdx = 0;
-let L = 1.0;            // metres
-let D_mm = 2.05;         // mm
-let direction = "conv";  // "conv" | "elec"
-let realistic = false;
-
-const canvas = document.getElementById("sim");
-const ctx = canvas.getContext("2d");
-let DPR = 1, ASPECT = 0.56;
-const isSmall = () => (canvas.parentElement.clientWidth || 800) < 560;
-
-/* ---------- physics ---------- */
-function compute(){
-  const m = MATERIALS[matIdx];
-  const D = D_mm/1000;
-  const A = Math.PI*(D/2)*(D/2);
-  const R = m.rho*L/A;
-  const I = V/R;
-  const n = freeElectronDensity(m);
-  const vd = I/(n*E_CHARGE*A);
-  const driftTime = L/vd;              // s, time for a carrier to cross the whole length
-  const signalTime = L/1e8;            // s, at the ~10^8 m/s signal speed the text quotes
-  return {m, D, A, R, I, n, vd, driftTime, signalTime};
-}
-
-/* ---------- formatting ---------- */
-function fmtSI(n, unit, digits){
-  digits = digits || 3;
-  const a = Math.abs(n);
-  if (a === 0) return "0 " + unit;
-  const exp = Math.floor(Math.log10(a));
-  if (exp >= -2 && exp < 3) return n.toFixed(Math.max(0, digits-1-exp)) + " " + unit;
-  const mant = n/Math.pow(10, exp);
-  return mant.toFixed(digits-1) + "\u00d710<sup>" + exp + "</sup> " + unit;
-}
-function fmtTime(s){
-  if (s < 1e-6) return fmtSI(s, "s");
-  if (s < 1)    return fmtSI(s, "s");
-  if (s < 60)   return s.toFixed(2) + " s";
-  if (s < 3600) return (s/60).toFixed(1) + " min";
-  if (s < 86400) return (s/3600).toFixed(1) + " hr";
-  return (s/86400).toFixed(1) + " days";
-}
-function frac(numHtml, denHtml){
-  return '<span class="frac"><span class="num">' + numHtml + '</span><span class="den">' + denHtml + '</span></span>';
-}
-
-/* ---------- canvas ---------- */
-function resize(){
-  const w = canvas.parentElement.clientWidth;
-  ASPECT = w < 560 ? 0.72 : 0.56;
-  const h = Math.round(w*ASPECT);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(w*dpr);
-  canvas.height = Math.round(h*dpr);
-  canvas.style.height = h + "px";
-  DPR = dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-const cw = () => canvas.width/DPR;
-const chh = () => canvas.height/DPR;
-
-// Rectangular loop path, parametrized by t in [0,1), traversed clockwise.
-// Battery sits on the left edge, resistor zigzag on the top edge.
-function loopGeometry(){
-  const W = cw(), H = chh();
-  const mx = W*0.14, my = H*0.16;
-  const x0 = mx, x1 = W-mx, y0 = my, y1 = H-my;
-  const top = 2*(x1-x0), right = 2*(y1-y0);
-  const perim = 2*top + 2*right; // top+bottom equal, left+right equal → simplifies below
-  const wTop = x1-x0, wSide = y1-y0;
-  const total = 2*wTop + 2*wSide;
-  return {x0, x1, y0, y1, wTop, wSide, total};
-}
-function pointOnLoop(t){
-  const g = loopGeometry();
-  let d = ((t%1)+1)%1 * g.total;
-  if (d < g.wTop){                                   // top edge, left -> right
-    return {x: g.x0+d, y: g.y0, edge:"top"};
-  }
-  d -= g.wTop;
-  if (d < g.wSide){                                  // right edge, top -> bottom
-    return {x: g.x1, y: g.y0+d, edge:"right"};
-  }
-  d -= g.wSide;
-  if (d < g.wTop){                                   // bottom edge, right -> left
-    return {x: g.x1-d, y: g.y1, edge:"bottom"};
-  }
-  d -= g.wTop;
-  return {x: g.x0, y: g.y1-d, edge:"left"};           // left edge, bottom -> top
-}
-
-function drawBattery(g){
-  const midY = (g.y0+g.y1)/2;
-  const x = g.x0;
-  ctx.save();
-  ctx.strokeStyle = "#16202B"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
-  // long thin line (+) above centre, short thick line (−) below centre
-  ctx.beginPath(); ctx.moveTo(x-16, midY-10); ctx.lineTo(x+16, midY-10); ctx.stroke();
-  ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(x-10, midY+10); ctx.lineTo(x+10, midY+10); ctx.stroke();
-  ctx.fillStyle = "#C2352B"; ctx.font = '600 13px "IBM Plex Mono", monospace'; ctx.textAlign="center";
-  ctx.fillText("+", x, midY-20);
-  ctx.fillStyle = "#1E5FA8";
-  ctx.fillText("\u2212", x, midY+30);
-  ctx.restore();
-}
-function drawResistor(g){
-  const y = g.y0, x0 = g.x0+g.wTop*0.28, x1 = g.x0+g.wTop*0.72;
-  const zigH = 10, teeth = 7;
-  ctx.save();
-  ctx.strokeStyle = "#8A5A2B"; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(x0, y);
-  const step = (x1-x0)/teeth;
-  for (let i = 0; i < teeth; i++){
-    const xm = x0 + step*(i+0.5);
-    ctx.lineTo(xm, y + (i%2===0 ? -zigH : zigH));
-  }
-  ctx.lineTo(x1, y);
-  ctx.stroke();
-  ctx.restore();
-}
-function drawWireLoop(g){
-  ctx.save();
-  ctx.strokeStyle = "#3C4A56"; ctx.lineWidth = 2.2; ctx.lineJoin = "round";
-  ctx.strokeRect(g.x0, g.y0, g.x1-g.x0, g.y1-g.y0);
-  ctx.restore();
-}
-function drawArrow(x, y, ux, uy, color){
-  const len = 9;
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.translate(x, y);
-  ctx.rotate(Math.atan2(uy, ux));
-  ctx.beginPath();
-  ctx.moveTo(len, 0); ctx.lineTo(-len*0.5, len*0.5); ctx.lineTo(-len*0.5, -len*0.5);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
-function edgeTangent(edge, sign){
-  // unit tangent for each edge when travelling with increasing t (clockwise); sign flips for electron flow
-  let ux=0, uy=0;
-  if (edge === "top") { ux=1; uy=0; }
-  else if (edge === "right"){ ux=0; uy=1; }
-  else if (edge === "bottom"){ ux=-1; uy=0; }
-  else { ux=0; uy=-1; }
-  return {ux: ux*sign, uy: uy*sign};
-}
-
-let phase = 0, lastT = null;
-const N_DOTS = 14;
-
-function draw(){
-  const W = cw(), H = chh();
-  ctx.clearRect(0, 0, W, H);
-  const g = loopGeometry();
-
-  drawWireLoop(g);
-  drawResistor(g);
-  drawBattery(g);
-
-  // static direction arrows at a few fixed points, independent of the animated dots
-  const sign = direction === "conv" ? 1 : -1;
-  const arrowColor = direction === "conv" ? "#C2352B" : "#1E5FA8";
-  [0.12, 0.37, 0.62, 0.87].forEach(t => {
-    const p = pointOnLoop(t);
-    const tan = edgeTangent(p.edge, sign);
-    drawArrow(p.x, p.y, tan.ux, tan.uy, arrowColor);
-  });
-
-  // moving charge carriers
-  const dotColor = direction === "conv" ? "#C2352B" : "#1E5FA8";
-  for (let i = 0; i < N_DOTS; i++){
-    const t = (i/N_DOTS + phase*sign) % 1;
-    const p = pointOnLoop(((t%1)+1)%1);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, isSmall()?3.4:4, 0, Math.PI*2);
-    ctx.fillStyle = dotColor;
-    ctx.fill();
-  }
-
-  // live values near the components
-  const r = compute();
-  ctx.save();
-  ctx.font = '600 ' + (isSmall()?11:12) + 'px "IBM Plex Mono", monospace';
-  ctx.fillStyle = "#16202B"; ctx.textAlign = "left";
-  ctx.fillText("V = " + V.toFixed(2) + " V", g.x0-6, g.y1+ (isSmall()?26:30));
-  ctx.textAlign = "center";
-  ctx.fillText("R = " + fmtNum(r.R) + " \u03a9", (g.x0+g.x1)/2, g.y0-16);
-  ctx.textAlign = "right";
-  ctx.fillText("I = " + fmtNum(r.I) + " A", g.x1+6, g.y1+ (isSmall()?26:30));
-  ctx.restore();
-
-  // legend
-  ctx.save();
-  ctx.font = '500 ' + (isSmall()?10:11) + 'px "IBM Plex Mono", monospace';
-  ctx.textAlign = "left"; ctx.fillStyle = "#5A6B79";
-  const label = direction === "conv" ? "conventional current (+ charge carriers)" : "electron flow (e\u207b, actual carriers in a metal)";
-  ctx.fillText(label, 10, H-10);
-  ctx.restore();
-}
-function fmtNum(n){
-  const a = Math.abs(n);
-  if (a === 0) return "0";
-  if (a >= 1000 || a < 0.01) return n.toExponential(2);
-  return n.toPrecision(3);
-}
-
-function animate(ts){
-  if (lastT === null) lastT = ts;
-  const dt = Math.min(0.05, (ts-lastT)/1000);
-  lastT = ts;
-
-  const r = compute();
-  let speed; // fraction of the loop per second
-  if (realistic){
-    // true drift speed mapped onto the schematic loop: phase covers the wire's
-    // actual length L once per (L / vd) seconds — this is the "almost frozen" case.
-    speed = (r.vd > 0) ? (1/r.driftTime) : 0;
-  } else {
-    // exaggerated but current-dependent, so a bigger I always animates faster
-    const ref = 5; // amps, a comfortable reference scale
-    const t = r.I/(r.I+ref);
-    speed = 0.06 + 0.5*t;
-  }
-  phase += speed*dt;
-  draw();
-  requestAnimationFrame(animate);
-}
-
-/* ---------- analysis panel ---------- */
-function updateReadout(){
-  const r = compute();
-  const box = document.getElementById("readout");
-  let html = "";
-
-  html += '<div class="step"><div class="eq"><strong>Resistance</strong><br>' +
-          'R = ' + frac('\u03c1L','A') + '</div>' +
-          '<div class="result-box"><div class="rline"><span class="rlabel">' +
-          '(' + r.m.rho.toExponential(2) + ' \u03a9\u00b7m)(' + L.toFixed(2) + ' m) / ' +
-          r.A.toExponential(2) + ' m\u00b2</span></div>' +
-          '<div class="rline"><span class="rlabel">R</span><span class="rval">' + fmtSI(r.R, "\u03a9") + '</span></div></div></div>';
-
-  html += '<div class="step"><div class="eq"><strong>Ohm\u2019s law</strong><br>' +
-          'I = ' + frac('V','R') + '</div>' +
-          '<div class="result-box"><div class="rline"><span class="rlabel">' +
-          V.toFixed(2) + ' V / ' + fmtSI(r.R,"\u03a9") + '</span></div>' +
-          '<div class="rline"><span class="rlabel">I</span><span class="rval">' + fmtSI(r.I, "A") + '</span></div></div></div>';
-
-  html += '<div class="step"><div class="eq"><strong>Drift velocity</strong><br>' +
-          'v<sub>d</sub> = ' + frac('I','nqA') + '</div>' +
-          '<div class="note">n = ' + fmtSI(r.n, "electrons/m\u00b3") + ' (one free electron per ' + r.m.name.toLowerCase() + ' atom)</div>' +
-          '<div class="result-box"><div class="rline"><span class="rlabel">v<sub>d</sub></span><span class="rval">' + fmtSI(r.vd, "m/s") + '</span></div></div></div>';
-
-  html += '<div class="step"><div class="eq"><strong>Drift time vs. signal time</strong></div>' +
-          '<div class="result-box"><div class="rline"><span class="rlabel">Time for one carrier to cross this wire</span><span class="rval">' + fmtTime(r.driftTime) + '</span></div>' +
-          '<div class="rline"><span class="rlabel">Time for the signal to cross it (~10\u2078 m/s)</span><span class="rval">' + fmtTime(r.signalTime) + '</span></div></div>' +
-          '<div class="note">The current turns on almost instantly even though each individual charge crawls along \u2014 a change in the electric field propagates the length of the wire long before any single electron gets there.</div></div>';
-
-  box.innerHTML = html;
-}
-
-/* ---------- UI wiring ---------- */
-const materialSel = document.getElementById("material");
-MATERIALS.forEach((m, i) => {
-  const opt = document.createElement("option");
-  opt.value = i; opt.textContent = m.name;
-  materialSel.appendChild(opt);
-});
-materialSel.onchange = () => { matIdx = parseInt(materialSel.value, 10); updateReadout(); };
-
-function bindPair(rangeId, numId, min, max, onSet){
-  const range = document.getElementById(rangeId), num = document.getElementById(numId);
-  range.oninput = () => { const v = parseFloat(range.value); num.value = v; onSet(v); updateReadout(); };
-  num.oninput = () => {
-    let v = parseFloat(num.value);
-    if (isNaN(v)) return;
-    v = Math.max(min, Math.min(max, v));
-    range.value = v; onSet(v); updateReadout();
-  };
-}
-bindPair("volt", "volt-num", 0.05, 24, v => { V = v; });
-bindPair("length", "length-num", 0.01, 5, v => { L = v; });
-bindPair("diam", "diam-num", 0.05, 10, v => { D_mm = v; });
-
-document.querySelectorAll('input[name="dir"]').forEach(r => {
-  r.onchange = () => { direction = document.querySelector('input[name="dir"]:checked').value; };
-});
-document.getElementById("realistic").onchange = e => { realistic = e.target.checked; };
-
-function setInputs(){
-  document.getElementById("volt").value = V; document.getElementById("volt-num").value = V;
-  document.getElementById("length").value = L; document.getElementById("length-num").value = L;
-  document.getElementById("diam").value = D_mm; document.getElementById("diam-num").value = D_mm;
-  materialSel.value = matIdx;
-}
-
-const PRESETS = {
-  starter:    {matIdx:0, L:0.50, D_mm:0.405, V:12},
-  calculator: {matIdx:0, L:5.0,  D_mm:0.05, V:1.5},
-  household:  {matIdx:0, L:1.00, D_mm:2.053, V:0.1039}
+const TYPES = {
+  wire:      {name:"Wire"},
+  resistor:  {name:"Resistor",  unit:"\u03a9",  min:1,   max:5000, log:true,  def:10},
+  bulb:      {name:"Light bulb",unit:"\u03a9",  min:1,   max:100,  log:true,  def:10},
+  battery:   {name:"Battery",   unit:"V",       min:0.5, max:24,   log:false, def:12, step:0.5},
+  capacitor: {name:"Capacitor", unit:"\u00b5F", min:100, max:5000, log:true,  def:1000},
+  switch:    {name:"Switch"}
 };
-document.querySelectorAll("[data-preset]").forEach(b => {
-  b.onclick = () => {
-    const p = PRESETS[b.dataset.preset];
-    matIdx = p.matIdx; L = p.L; D_mm = p.D_mm; V = p.V;
-    setInputs(); updateReadout();
-  };
+const TOOL_LIST = ["select","wire","resistor","bulb","battery","capacitor","switch","erase"];
+const TOOL_NAMES = {select:"Select", wire:"Wire", resistor:"Resistor", bulb:"Bulb", battery:"Battery",
+                    capacitor:"Capacitor", switch:"Switch", erase:"Erase"};
+const TOOL_ICONS = {
+  select:'<path d="M12 3 L12 17 L16 13 L19 19 L21 18 L18 12 L23 12 Z" fill="none" stroke="#16202B" stroke-width="1.5"/>',
+  wire:'<line x1="2" y1="10" x2="32" y2="10" stroke="#16202B" stroke-width="2"/>',
+  resistor:'<polyline points="2,10 8,10 10,4 14,16 18,4 22,16 24,10 32,10" fill="none" stroke="#16202B" stroke-width="1.6"/>',
+  bulb:'<line x1="2" y1="10" x2="10" y2="10" stroke="#16202B" stroke-width="1.6"/><circle cx="17" cy="10" r="7" fill="none" stroke="#16202B" stroke-width="1.6"/><path d="M12 5 L22 15 M22 5 L12 15" stroke="#16202B" stroke-width="1.2"/><line x1="24" y1="10" x2="32" y2="10" stroke="#16202B" stroke-width="1.6"/>',
+  battery:'<line x1="2" y1="10" x2="14" y2="10" stroke="#16202B" stroke-width="1.6"/><line x1="14" y1="3" x2="14" y2="17" stroke="#16202B" stroke-width="1.6"/><line x1="20" y1="6" x2="20" y2="14" stroke="#16202B" stroke-width="3.5"/><line x1="20" y1="10" x2="32" y2="10" stroke="#16202B" stroke-width="1.6"/>',
+  capacitor:'<line x1="2" y1="10" x2="14" y2="10" stroke="#16202B" stroke-width="1.6"/><line x1="14" y1="3" x2="14" y2="17" stroke="#16202B" stroke-width="2"/><line x1="20" y1="3" x2="20" y2="17" stroke="#16202B" stroke-width="2"/><line x1="20" y1="10" x2="32" y2="10" stroke="#16202B" stroke-width="1.6"/>',
+  switch:'<line x1="2" y1="12" x2="10" y2="12" stroke="#16202B" stroke-width="1.6"/><circle cx="10" cy="12" r="1.8" fill="#16202B"/><line x1="10" y1="12" x2="23" y2="4" stroke="#16202B" stroke-width="1.6"/><circle cx="24" cy="12" r="1.8" fill="#16202B"/><line x1="24" y1="12" x2="32" y2="12" stroke="#16202B" stroke-width="1.6"/>',
+  erase:'<path d="M6 16 L16 4 L28 12 L22 18 L10 18 Z" fill="none" stroke="#16202B" stroke-width="1.5"/><line x1="4" y1="19" x2="30" y2="19" stroke="#16202B" stroke-width="1.2"/>'
+};
+
+/* ================= state ================= */
+let edges = new Map();          // key -> component
+let tool = "select";
+let selKey = null;
+let direction = "conv", showI = true, showV = false;
+let simT = 0, hist = [], histKey = null;
+let hoverKey = null;
+let painting = false, lastPaintKey = null;
+let nodeV = new Float64Array(NN);
+let solvedOK = true;
+let idCounter = 1;
+
+const key = (o,i,j) => o + "," + i + "," + j;
+function parseKey(k){ const [o,i,j] = k.split(","); return {o, i:+i, j:+j}; }
+function ends(o,i,j){ return o === "h" ? [[i,j],[i+1,j]] : [[i,j],[i,j+1]]; }
+const nIdx = (i,j) => j*(COLS+1) + i;
+
+function makeComp(type){
+  const c = {id: idCounter++, type, phase: Math.random(), I: 0, V: 0};
+  if (TYPES[type].def !== undefined) c.value = TYPES[type].def;
+  if (type === "battery") c.flip = false;       // false: + terminal at end B (right / bottom)
+  if (type === "switch")  c.closed = false;
+  if (type === "capacitor") c.vc = 0;           // V_A - V_B
+  return c;
+}
+
+/* ================= solver (modified nodal analysis with Norton sources) ================= */
+function stamp(M, rhs, c, a, b, dt){
+  let G = 0, J = 0;                               // element current A->B = G (Va - Vb) + J
+  switch (c.type){
+    case "wire": G = 1/R_WIRE; break;
+    case "switch": if (c.closed) G = 1/R_WIRE; else return {G:0, J:0};
+      break;
+    case "resistor": case "bulb": G = 1/c.value; break;
+    case "battery": G = 1/R_BATT; J = (c.flip ? -1 : 1)*c.value/R_BATT; break;
+    case "capacitor": G = c.value*1e-6/dt; J = -G*c.vc; break;
+  }
+  M[a*NN+a] += G; M[b*NN+b] += G; M[a*NN+b] -= G; M[b*NN+a] -= G;
+  rhs[a] -= J; rhs[b] += J;
+  return {G, J};
+}
+function gauss(M, x, n){
+  for (let c = 0; c < n; c++){
+    let p = c, best = Math.abs(M[c*n+c]);
+    for (let r = c+1; r < n; r++){ const v = Math.abs(M[r*n+c]); if (v > best){ best = v; p = r; } }
+    if (best < 1e-300) return false;
+    if (p !== c){
+      for (let k = c; k < n; k++){ const t = M[c*n+k]; M[c*n+k] = M[p*n+k]; M[p*n+k] = t; }
+      const t = x[c]; x[c] = x[p]; x[p] = t;
+    }
+    const d = M[c*n+c];
+    for (let r = c+1; r < n; r++){
+      const f = M[r*n+c]/d;
+      if (f === 0) continue;
+      for (let k = c; k < n; k++) M[r*n+k] -= f*M[c*n+k];
+      x[r] -= f*x[c];
+    }
+  }
+  for (let r = n-1; r >= 0; r--){
+    let s = x[r];
+    for (let k = r+1; k < n; k++) s -= M[r*n+k]*x[k];
+    x[r] = s/M[r*n+r];
+  }
+  return true;
+}
+function solve(dt, commit){
+  const M = new Float64Array(NN*NN), x = new Float64Array(NN);
+  for (let k = 0; k < NN; k++) M[k*NN+k] = GMIN;
+  const st = [];
+  for (const [k, c] of edges){
+    const e = parseKey(k), [[ai,aj],[bi,bj]] = ends(e.o, e.i, e.j);
+    const a = nIdx(ai,aj), b = nIdx(bi,bj);
+    st.push([c, a, b, stamp(M, x, c, a, b, dt)]);
+  }
+  solvedOK = gauss(M, x, NN);
+  if (!solvedOK) return;
+  nodeV = x;
+  for (const [c, a, b, s] of st){
+    const v = x[a] - x[b];
+    c.V = v;
+    c.I = (c.type === "switch" && !c.closed) ? 0 : s.G*v + s.J;
+    if (commit && c.type === "capacitor") c.vc = v;
+  }
+}
+function step(frameDt){
+  const hasCap = [...edges.values()].some(c => c.type === "capacitor");
+  if (hasCap){
+    const n = Math.min(40, Math.max(1, Math.round(frameDt/DT)));
+    for (let s = 0; s < n; s++) solve(DT, true);
+    simT += n*DT;
+  } else {
+    solve(DT, false);
+    simT += frameDt;
+  }
+}
+
+/* ================= formatting ================= */
+const PREF = [[1e3,"k"],[1,""],[1e-3,"m"],[1e-6,"\u00b5"]];
+function fmt(v, unit, sig){
+  sig = sig || 3;
+  const a = Math.abs(v);
+  if (a < 5e-7) return "0 " + unit;
+  for (const [p, s] of PREF){
+    if (a >= p*0.9995 || p === 1e-6){
+      const n = v/p;
+      return (Math.abs(n) >= 100 ? n.toFixed(0) : Number(n.toPrecision(sig)).toString()) + " " + s + unit;
+    }
+  }
+}
+function valueLabel(c){
+  if (c.type === "capacitor") return fmt(c.value*1e-6, "F");
+  if (c.type === "battery") return c.value + " V";
+  if (c.type === "resistor" || c.type === "bulb") return fmt(c.value, "\u03a9");
+  return "";
+}
+
+/* ================= canvas & geometry ================= */
+const canvas = document.getElementById("board"), ctx = canvas.getContext("2d");
+const gcan = document.getElementById("graph"), gctx = gcan.getContext("2d");
+let DPR = 1, G0 = {ox:0, oy:0, cell:60};
+
+function resize(){
+  const w = canvas.parentElement.clientWidth || 800;
+  const small = w < 560;
+  const h = Math.round(w*(small ? 0.86 : 0.64));
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w*DPR); canvas.height = Math.round(h*DPR); canvas.style.height = h + "px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const top = small ? 58 : 48, bot = small ? 30 : 44, side = small ? 22 : 40;
+  const cell = Math.min((w - 2*side)/COLS, (h - top - bot)/ROWS);
+  G0 = {cell, ox: (w - cell*COLS)/2, oy: top + ((h - top - bot) - cell*ROWS)/2};
+  const gh = small ? 170 : 150;
+  gcan.width = Math.round(w*DPR); gcan.height = Math.round(gh*DPR); gcan.style.height = gh + "px";
+  gctx.setTransform(DPR,0,0,DPR,0,0);
+}
+const P = (i,j) => ({x: G0.ox + i*G0.cell, y: G0.oy + j*G0.cell});
+
+function edgeAt(px, py){
+  const gx = (px - G0.ox)/G0.cell, gy = (py - G0.oy)/G0.cell;
+  let best = null, bd = 1e9;
+  const jh = Math.round(gy), ih = Math.floor(gx);
+  if (ih >= 0 && ih < COLS && jh >= 0 && jh <= ROWS){
+    const d = Math.abs(gy - jh), along = gx - ih;
+    if (along > 0.12 && along < 0.88 && d < bd){ bd = d; best = key("h", ih, jh); }
+  }
+  const iv = Math.round(gx), jv = Math.floor(gy);
+  if (iv >= 0 && iv <= COLS && jv >= 0 && jv < ROWS){
+    const d = Math.abs(gx - iv), along = gy - jv;
+    if (along > 0.12 && along < 0.88 && d < bd){ bd = d; best = key("v", iv, jv); }
+  }
+  return bd < 0.3 ? best : null;
+}
+
+/* ================= drawing ================= */
+function line(x1,y1,x2,y2,col,w){ ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+function text(t, x, y, col, align, size, weight){
+  ctx.save(); ctx.fillStyle = col; ctx.textAlign = align || "center"; ctx.textBaseline = "middle";
+  ctx.font = (weight || "600") + " " + (size || 11) + 'px "IBM Plex Mono", monospace'; ctx.fillText(t, x, y); ctx.restore();
+}
+
+// Draw a component in local coordinates: x along the edge (A at -L/2, B at +L/2), y perpendicular.
+function drawComp(c, e){
+  const [[ai,aj],[bi,bj]] = ends(e.o, e.i, e.j);
+  const A = P(ai,aj), B = P(bi,bj);
+  const mx = (A.x+B.x)/2, my = (A.y+B.y)/2, L = G0.cell, h = L/2;
+  ctx.save(); ctx.translate(mx, my); if (e.o === "v") ctx.rotate(Math.PI/2);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const lead = (x1, x2) => line(x1, 0, x2, 0, COL.wire, 2.4);
+  const k = L*0.26;
+  switch (c.type){
+    case "wire": lead(-h, h); break;
+    case "resistor": {
+      lead(-h, -k); lead(k, h);
+      ctx.strokeStyle = COL.res; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-k, 0);
+      const n = 6, z = L*0.09;
+      for (let t = 0; t < n; t++) ctx.lineTo(-k + 2*k*(t+0.5)/n, t%2 ? z : -z);
+      ctx.lineTo(k, 0); ctx.stroke(); break;
+    }
+    case "bulb": {
+      const r = L*0.17, P2 = c.I*c.I*c.value, b = P2/(P2 + 4);
+      lead(-h, -r); lead(r, h);
+      if (b > 0.02){
+        const g = ctx.createRadialGradient(0,0,r*0.3, 0,0, r*(1.4 + 2.2*b));
+        g.addColorStop(0, "rgba(255,210,70," + (0.35+0.6*b) + ")"); g.addColorStop(1, "rgba(255,210,70,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0, r*(1.4+2.2*b), 0, 2*Math.PI); ctx.fill();
+      }
+      ctx.fillStyle = b > 0.02 ? "rgba(255,226,120," + (0.4+0.6*b) + ")" : "#fff";
+      ctx.beginPath(); ctx.arc(0,0,r,0,2*Math.PI); ctx.fill();
+      ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.8; ctx.stroke();
+      ctx.lineWidth = 1.3; ctx.beginPath(); const q = r*0.7;
+      ctx.moveTo(-q,-q); ctx.lineTo(q,q); ctx.moveTo(q,-q); ctx.lineTo(-q,q); ctx.stroke(); break;
+    }
+    case "battery": {
+      const s = c.flip ? -1 : 1, g = L*0.06;          // long (+) plate toward B unless flipped
+      lead(-h, -g); lead(g, h);
+      ctx.fillStyle = "#fff"; ctx.fillRect(-g+1, -L*0.2, 2*g-2, L*0.4);
+      line(s*g, -L*0.19, s*g, L*0.19, COL.ink, 2.2);
+      line(-s*g, -L*0.1, -s*g, L*0.1, COL.ink, 5);
+      ctx.restore(); ctx.save(); ctx.translate(mx, my);
+      // + and - signs, drawn without rotation
+      const ux = e.o === "h" ? 1 : 0, uy = e.o === "h" ? 0 : 1, px = e.o === "h" ? 0 : -1, py = e.o === "h" ? -1 : 0;
+      const off = e.o === "h" ? L*0.21 : L*0.15;
+      text("+", s*ux*g*2.6 + px*off, s*uy*g*2.6 + py*off, COL.conv, "center", 13);
+      text("\u2212", -s*ux*g*2.6 + px*off, -s*uy*g*2.6 + py*off, COL.elec, "center", 13);
+      break;
+    }
+    case "capacitor": {
+      const g = L*0.06;
+      lead(-h, -g); lead(g, h);
+      line(-g, -L*0.17, -g, L*0.17, COL.cap, 3); line(g, -L*0.17, g, L*0.17, COL.cap, 3);
+      const q = Math.min(1, Math.abs(c.vc)/12);
+      if (q > 0.02){
+        ctx.fillStyle = "rgba(194,53,43," + (0.2+0.6*q) + ")";
+        ctx.fillRect(c.vc > 0 ? -g-5 : g+2, -L*0.17*q, 3, 2*L*0.17*q);
+        ctx.fillStyle = "rgba(30,95,168," + (0.2+0.6*q) + ")";
+        ctx.fillRect(c.vc > 0 ? g+2 : -g-5, -L*0.17*q, 3, 2*L*0.17*q);
+      }
+      break;
+    }
+    case "switch": {
+      const s0 = -L*0.22, s1 = L*0.22;
+      lead(-h, s0); lead(s1, h);
+      ctx.fillStyle = COL.ink;
+      ctx.beginPath(); ctx.arc(s0, 0, 3.5, 0, 2*Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(s1, 0, 3.5, 0, 2*Math.PI); ctx.fill();
+      const ang = c.closed ? 0 : -0.55, len = s1 - s0;
+      line(s0, 0, s0 + len*Math.cos(ang), len*Math.sin(ang), COL.ink, 2.6);
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+function drawDots(c, e, dt){
+  if (Math.abs(c.I) < 2e-5) return;
+  const [[ai,aj],[bi,bj]] = ends(e.o, e.i, e.j);
+  const A = P(ai,aj), B = P(bi,bj);
+  const col = direction === "conv" ? COL.conv : COL.elec;
+  ctx.fillStyle = col;
+  for (let k = 0; k < 3; k++){
+    const u = (((k/3 + c.phase) % 1) + 1) % 1;
+    ctx.beginPath(); ctx.arc(A.x + (B.x-A.x)*u, A.y + (B.y-A.y)*u, 3.4, 0, 2*Math.PI); ctx.fill();
+  }
+}
+function advanceDots(dt){
+  for (const c of edges.values()){
+    const a = Math.abs(c.I);
+    if (a < 2e-5) continue;
+    const speed = Math.max(0.2, Math.min(2.0, 0.2 + 0.45*Math.log10(a/1e-4)));   // cells per second
+    const sgn = Math.sign(c.I)*(direction === "conv" ? 1 : -1);
+    c.phase += sgn*speed*dt;
+  }
+}
+
+// which = 0: value label, 1: current/voltage label
+function labelPos(e, which){
+  const [[ai,aj],[bi,bj]] = ends(e.o, e.i, e.j);
+  const A = P(ai,aj), B = P(bi,bj), mx = (A.x+B.x)/2, my = (A.y+B.y)/2;
+  if (e.o === "h") return {x: mx, y: my + (which ? 1 : -1)*G0.cell*0.36, align:"center"};
+  const partAt = (i, j) => { const c = edges.get(key("v", i, j)); return c && c.type !== "wire"; };
+  const side = (e.i === COLS || partAt(e.i+1, e.j)) ? -1 : 1;   // stack labels on the free side
+  return {x: mx + side*(G0.cell*0.22 + 7), y: my + (which ? 8 : -8), align: side > 0 ? "left" : "right"};
+}
+
+function draw(dt){
+  const W = canvas.width/DPR, H = canvas.height/DPR;
+  ctx.clearRect(0,0,W,H);
+  // hover preview
+  if (hoverKey && tool !== "select"){
+    const e = parseKey(hoverKey), [[ai,aj],[bi,bj]] = ends(e.o,e.i,e.j), A = P(ai,aj), B = P(bi,bj);
+    ctx.save(); ctx.strokeStyle = tool === "erase" ? "rgba(194,53,43,.35)" : "rgba(217,139,0,.35)"; ctx.lineWidth = 12; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.restore();
+  }
+  // selection halo
+  if (selKey && edges.has(selKey)){
+    const e = parseKey(selKey), [[ai,aj],[bi,bj]] = ends(e.o,e.i,e.j), A = P(ai,aj), B = P(bi,bj);
+    ctx.save(); ctx.strokeStyle = "rgba(217,139,0,.45)"; ctx.lineWidth = 16; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.restore();
+  }
+  // grid dots and junctions
+  const deg = new Uint8Array(NN);
+  for (const k of edges.keys()){ const e = parseKey(k), [[ai,aj],[bi,bj]] = ends(e.o,e.i,e.j); deg[nIdx(ai,aj)]++; deg[nIdx(bi,bj)]++; }
+  for (let j = 0; j <= ROWS; j++) for (let i = 0; i <= COLS; i++){
+    const p = P(i,j), d = deg[nIdx(i,j)];
+    ctx.fillStyle = d >= 3 ? COL.wire : (d > 0 ? COL.wire : "#B9C5CF");
+    ctx.beginPath(); ctx.arc(p.x, p.y, d >= 3 ? 4.5 : (d > 0 ? 2.2 : 2.6), 0, 2*Math.PI); ctx.fill();
+  }
+  for (const [k, c] of edges) drawComp(c, parseKey(k));
+  for (const [k, c] of edges) drawDots(c, parseKey(k));
+  // labels
+  for (const [k, c] of edges){
+    if (c.type === "wire") continue;
+    const e = parseKey(k);
+    const vl = valueLabel(c);
+    if (vl){ const p = labelPos(e, 0); text(vl, p.x, p.y, c.type === "capacitor" ? COL.cap : (c.type === "battery" ? COL.ink : COL.res), p.align, 11); }
+    const bits = [];
+    if (showI && !(c.type === "switch" && !c.closed)) bits.push("I=" + fmt(Math.abs(c.I), "A"));
+    if (showV && c.type !== "switch") bits.push("V=" + fmt(Math.abs(c.V), "V"));
+    if (bits.length){ const p = labelPos(e, 1); text(bits.join("  "), p.x, p.y, COL.soft, p.align, 10, "500"); }
+  }
+}
+
+/* ================= graph for the selected part ================= */
+function drawGraph(){
+  const wrap = document.getElementById("graph-wrap");
+  const c = selKey ? edges.get(selKey) : null;
+  if (!c || c.type === "wire"){ wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  const W = gcan.width/DPR, H = gcan.height/DPR;
+  gctx.clearRect(0,0,W,H);
+  const padL = 84, padR = 12, padT = 26, padB = 20, pw = W - padL - padR, rowH = (H - padT - padB)/2, WIN = 10;
+  gctx.save(); gctx.fillStyle = COL.ink; gctx.font = '600 12px "IBM Plex Sans", sans-serif'; gctx.textBaseline = "middle";
+  gctx.fillText("Selected: " + TYPES[c.type].name + (valueLabel(c) ? " (" + valueLabel(c) + ")" : "") + " over the last " + WIN + " s", 12, 13); gctx.restore();
+  const rows = [{k:"V", lab:"V across", unit:"V", col: COL.cap}, {k:"I", lab:"I through", unit:"A", col: COL.conv}];
+  const t0 = simT - WIN;
+  rows.forEach((r, n) => {
+    const top = padT + n*rowH, bottom = top + rowH - 6;
+    let mx = 0; for (const h of hist) mx = Math.max(mx, Math.abs(h[r.k]));
+    mx = mx > 0 ? mx*1.15 : 1;
+    gctx.save(); gctx.strokeStyle = COL.rule; gctx.beginPath(); gctx.moveTo(padL, bottom); gctx.lineTo(padL+pw, bottom); gctx.stroke();
+    gctx.strokeStyle = r.col; gctx.lineWidth = 2; gctx.beginPath();
+    let first = true;
+    for (const h of hist){
+      if (h.t < t0) continue;
+      const x = padL + (h.t - t0)/WIN*pw, y = bottom - Math.abs(h[r.k])/mx*(rowH - 12);
+      if (first){ gctx.moveTo(x,y); first = false; } else gctx.lineTo(x,y);
+    }
+    gctx.stroke(); gctx.restore();
+    gctx.save(); gctx.textBaseline = "middle"; gctx.font = '600 11px "IBM Plex Mono", monospace';
+    gctx.fillStyle = r.col; gctx.fillText(r.lab, 10, top + rowH/2 - 8);
+    gctx.fillStyle = COL.ink; gctx.fillText(fmt(Math.abs(c[r.k]), r.unit), 10, top + rowH/2 + 8);
+    gctx.restore();
+  });
+}
+
+/* ================= panels ================= */
+function logToSlider(v, t){ return Math.round(1000*Math.log(v/t.min)/Math.log(t.max/t.min)); }
+function sliderToLog(s, t){ const v = t.min*Math.pow(t.max/t.min, s/1000); return v >= 100 ? Math.round(v/10)*10 : (v >= 10 ? Math.round(v) : Math.round(v*10)/10); }
+
+function renderSelected(){
+  const box = document.getElementById("sel");
+  const c = selKey ? edges.get(selKey) : null;
+  if (!c){ box.innerHTML = '<div class="empty">Choose <strong>Select</strong> and tap any part to change its value, flip it, or read its voltage and current.</div>'; return; }
+  const t = TYPES[c.type];
+  let html = '<div class="sel-title">' + t.name + '</div>';
+  if (t.unit){
+    const sv = t.log ? logToSlider(c.value, t) : c.value;
+    const rmin = t.log ? 0 : t.min, rmax = t.log ? 1000 : t.max, rstep = t.log ? 1 : (t.step || 0.5);
+    html += '<div class="field"><label for="sel-range">Value</label>' +
+            '<input type="range" id="sel-range" min="' + rmin + '" max="' + rmax + '" step="' + rstep + '" value="' + sv + '">' +
+            '<input type="number" id="sel-num" min="' + t.min + '" max="' + t.max + '" step="any" value="' + c.value + '">' +
+            '<span class="unit">' + t.unit + '</span></div>';
+  }
+  html += '<div class="row">';
+  if (c.type === "battery") html += '<button class="act" id="sel-flip">Flip polarity</button>';
+  if (c.type === "switch") html += '<button class="act" id="sel-toggle">' + (c.closed ? "Open switch" : "Close switch") + '</button>';
+  html += '<button class="act danger" id="sel-del">Remove</button></div>';
+  html += '<div class="readout"><div class="result-box" id="sel-meas"></div></div><div class="note" id="sel-note"></div>';
+  box.innerHTML = html;
+
+  const r = document.getElementById("sel-range"), n = document.getElementById("sel-num");
+  if (r){
+    r.oninput = () => { c.value = t.log ? sliderToLog(+r.value, t) : +r.value; n.value = c.value; };
+    n.onchange = () => { let v = parseFloat(n.value); if (isNaN(v)) return; v = Math.max(t.min, Math.min(t.max, v)); c.value = v; n.value = v; r.value = t.log ? logToSlider(v, t) : v; };
+  }
+  const f = document.getElementById("sel-flip"); if (f) f.onclick = () => { c.flip = !c.flip; };
+  const tg = document.getElementById("sel-toggle"); if (tg) tg.onclick = () => { c.closed = !c.closed; tg.textContent = c.closed ? "Open switch" : "Close switch"; };
+  document.getElementById("sel-del").onclick = () => { edges.delete(selKey); selKey = null; renderSelected(); };
+  updateMeasurements();
+}
+function updateMeasurements(){
+  const c = selKey ? edges.get(selKey) : null, box = document.getElementById("sel-meas");
+  if (!c || !box) return;
+  const line = (l, v) => '<div class="rline"><span class="rlabel">' + l + '</span><span class="rval">' + v + '</span></div>';
+  let h = "", note = "";
+  const V = Math.abs(c.V), I = Math.abs(c.I);
+  if (c.type === "resistor" || c.type === "bulb"){
+    h += line("Voltage across", fmt(V, "V")) + line("Current through", fmt(I, "A")) + line("Power P = I\u00b2R", fmt(I*I*c.value, "W"));
+    if (I > 1e-6) h += line("Check: V / I", fmt(V/I, "\u03a9"));
+    note = c.type === "bulb" ? "A bulb glows brighter when more power is delivered to it." : "Ohm\u2019s law: V = IR for every resistor, whatever the rest of the circuit looks like.";
+  } else if (c.type === "battery"){
+    h += line("Terminal voltage", fmt(V, "V")) + line("Current delivered", fmt(I, "A")) + line("Power delivered", fmt(V*I, "W"));
+    note = I > 30 ? "Short circuit: almost nothing limits the current." : "The battery sets the voltage; the rest of the circuit decides the current.";
+  } else if (c.type === "capacitor"){
+    const C = c.value*1e-6, vc = Math.abs(c.vc);
+    h += line("Voltage across", fmt(vc, "V")) + line("Charge Q = CV", fmt(C*vc, "C")) + line("Current", fmt(I, "A"));
+    note = I > 1e-5 ? (Math.abs(c.I*c.vc) > 0 && Math.sign(c.I) === Math.sign(c.vc) ? "Charging: current flows while V\u2080 changes. It slows down as the capacitor fills (\u03c4 = RC)." : "Discharging: the capacitor pushes current back around the circuit.") :
+           "No current: a capacitor blocks steady (DC) current once it has finished charging or discharging.";
+    note = note.replace("V\u2080", "V");
+  } else if (c.type === "switch"){
+    h += line("State", c.closed ? "closed" : "open") + line(c.closed ? "Current through" : "Voltage across the gap", c.closed ? fmt(I, "A") : fmt(V, "V"));
+    note = c.closed ? "A closed switch acts like a wire." : "An open switch breaks the loop, so no current flows through it.";
+  }
+  box.innerHTML = h;
+  const nt = document.getElementById("sel-note"); if (nt) nt.textContent = note;
+}
+
+function updateSummary(){
+  const box = document.getElementById("summary");
+  const all = [...edges.values()];
+  const batts = all.filter(c => c.type === "battery");
+  const caps = all.filter(c => c.type === "capacitor");
+  const line = (l, v) => '<div class="rline"><span class="rlabel">' + l + '</span><span class="rval">' + v + '</span></div>';
+  let h = '<div class="result-box">' + line("Parts on the board", String(all.filter(c => c.type !== "wire").length));
+  if (batts.length === 1){
+    const b = batts[0], I = Math.abs(b.I);
+    h += line("Current from the battery", fmt(I, "A"));
+    if (!caps.length && I > 1e-6 && I < 30) h += line("Resistance seen by battery", fmt(b.value/I, "\u03a9"));
+    h += line("Power from the battery", fmt(b.value*I, "W"));
+  } else if (batts.length > 1){
+    h += line("Batteries", String(batts.length));
+  }
+  if (caps.length) h += line("Time since start", simT.toFixed(1) + " s");
+  h += '</div>';
+  h += '<div class="note">Series: one path, the same current through every part, voltages add up to the battery voltage. Parallel: several paths, the same voltage across each branch, currents add up at the junctions.</div>';
+  box.innerHTML = h;
+
+  const warn = document.getElementById("warn"), info = document.getElementById("info");
+  const shorted = batts.some(b => Math.abs(b.I) > 30);
+  const anyI = all.some(c => c.type !== "battery" && Math.abs(c.I) > 1e-6);
+  if (shorted){
+    warn.style.display = "block"; info.style.display = "none";
+    warn.textContent = "Short circuit! A wire path connects the battery terminals with almost no resistance, so the current is enormous. Add a resistor or bulb to that path.";
+  } else {
+    warn.style.display = "none";
+    const openSw = all.some(c => c.type === "switch" && !c.closed);
+    if (batts.length && !anyI){
+      info.style.display = "block";
+      info.textContent = openSw ? "No current. A switch is open, so the loop is broken. Select the switch and close it."
+                                : (caps.length ? "No current right now. A charged capacitor blocks steady current." : "No current. Current needs a closed loop from the + terminal back to the \u2212 terminal.");
+    } else info.style.display = "none";
+  }
+}
+
+/* ================= interaction ================= */
+function applyTool(k){
+  if (!k) return;
+  if (tool === "erase"){ edges.delete(k); if (selKey === k) selKey = null; renderSelected(); return; }
+  if (tool === "select"){
+    const c = edges.get(k);
+    if (c && c.type === "switch" && selKey === k){ c.closed = !c.closed; }
+    selKey = c ? k : null; hist = []; histKey = selKey; renderSelected(); return;
+  }
+  const cur = edges.get(k);
+  if (cur && cur.type === tool && tool !== "wire"){ selKey = k; hist = []; renderSelected(); return; }
+  edges.set(k, makeComp(tool));
+  if (tool !== "wire"){ selKey = k; hist = []; renderSelected(); }
+}
+function pos(e){ const r = canvas.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; }
+canvas.addEventListener("pointerdown", e => {
+  const p = pos(e), k = edgeAt(p.x, p.y);
+  applyTool(k);
+  if (tool === "wire" || tool === "erase"){ painting = true; lastPaintKey = k; canvas.setPointerCapture(e.pointerId); }
 });
+canvas.addEventListener("pointermove", e => {
+  const p = pos(e), k = edgeAt(p.x, p.y);
+  hoverKey = e.pointerType === "mouse" ? k : null;
+  canvas.style.cursor = k ? "pointer" : "default";
+  if (painting && k && k !== lastPaintKey){ applyTool(k); lastPaintKey = k; }
+});
+const stopPaint = () => { painting = false; lastPaintKey = null; };
+canvas.addEventListener("pointerup", stopPaint);
+canvas.addEventListener("pointercancel", stopPaint);
+canvas.addEventListener("pointerleave", () => { hoverKey = null; });
+
+/* ================= toolbox ================= */
+const toolsEl = document.getElementById("tools");
+TOOL_LIST.forEach(t => {
+  const b = document.createElement("button");
+  b.className = "act"; b.dataset.tool = t; b.setAttribute("aria-pressed", String(t === tool));
+  b.innerHTML = '<svg viewBox="0 0 34 20" aria-hidden="true">' + TOOL_ICONS[t] + '</svg><span>' + TOOL_NAMES[t] + '</span>';
+  b.onclick = () => {
+    tool = t;
+    toolsEl.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.tool === t)));
+    const HINT = {select:"Tap a part to edit it. Tap a selected switch again to open or close it.",
+                  wire:"Click or tap between two dots to add a wire. Drag to draw several at once.",
+                  erase:"Click or tap a part to remove it. Drag to erase several."};
+    document.getElementById("hint").textContent = HINT[t] || ("Click or tap between two dots to place a " + TYPES[t].name.toLowerCase() + ".");
+  };
+  toolsEl.appendChild(b);
+});
+
+/* ================= templates ================= */
+function put(o,i,j,type,value,extra){
+  const c = makeComp(type);
+  if (value !== undefined && value !== null) c.value = value;
+  Object.assign(c, extra || {});
+  edges.set(key(o,i,j), c);
+}
+function wires(list){ list.forEach(([o,i,j]) => put(o,i,j,"wire")); }
+function loopFrame(x0, x1, battV){      // battery on the left side (+ on top), wires on bottom and left
+  put("v", x0, 1, "wire"); put("v", x0, 2, "battery", battV, {flip:true});
+  for (let i = x0; i < x1; i++) put("h", i, 3, "wire");
+}
+const TEMPLATES = {
+  series(){
+    loopFrame(1, 5, 12);
+    put("h",1,1,"wire"); put("h",2,1,"resistor",10); put("h",3,1,"resistor",20); put("h",4,1,"resistor",30);
+    wires([["v",5,1],["v",5,2]]);
+  },
+  parallel(){
+    loopFrame(1, 5, 12);
+    wires([["h",1,1],["h",2,1],["h",3,1],["h",4,1]]);
+    put("v",3,1,"resistor",10); put("v",3,2,"wire");
+    put("v",4,1,"resistor",20); put("v",4,2,"wire");
+    put("v",5,1,"resistor",30); put("v",5,2,"wire");
+  },
+  combo(){
+    loopFrame(1, 5, 12);
+    put("h",1,1,"resistor",10); wires([["h",2,1],["h",3,1],["h",4,1]]);
+    put("v",3,1,"resistor",20); put("v",3,2,"wire");
+    put("v",5,1,"resistor",30); put("v",5,2,"wire");
+  },
+  bulbs(){
+    // left: two bulbs in series
+    loopFrame(0, 2, 12);
+    put("h",0,1,"bulb",10); put("h",1,1,"bulb",10); wires([["v",2,1],["v",2,2]]);
+    // right: two bulbs in parallel
+    loopFrame(4, 6, 12);
+    wires([["h",4,1],["h",5,1]]);
+    put("v",5,1,"bulb",10); put("v",5,2,"wire");
+    put("v",6,1,"bulb",10); put("v",6,2,"wire");
+  },
+  rc(){
+    loopFrame(1, 5, 12);
+    put("h",1,1,"switch",null,{closed:false}); put("h",2,1,"resistor",1000); wires([["h",3,1],["h",4,1]]);
+    put("v",5,1,"capacitor",2000); put("v",5,2,"wire");
+    put("v",4,1,"switch",null,{closed:false}); put("v",4,2,"resistor",1000);
+  },
+  clear(){}
+};
+const TMPL_NOTES = {
+  series:"Three resistors in series. Tap each one: the current is the same, the voltages add up to 12 V.",
+  parallel:"Three resistors in parallel. Each branch gets the full 12 V; the branch currents add up.",
+  combo:"R\u2081 in series with R\u2082 \u2225 R\u2083. Which resistor has the largest current?",
+  bulbs:"Same bulbs, same battery. Which pair glows brighter, and why?",
+  rc:"Close the top switch to charge the capacitor through 1 k\u03a9 (\u03c4 = 2 s). Then open it and close the middle switch to discharge.",
+  clear:"Empty board. Pick a part from the toolbox and start building."
+};
+document.querySelectorAll("[data-tmpl]").forEach(b => b.onclick = () => {
+  edges = new Map(); selKey = null; hist = []; simT = 0;
+  TEMPLATES[b.dataset.tmpl]();
+  renderSelected();
+  document.getElementById("hint").textContent = TMPL_NOTES[b.dataset.tmpl];
+});
+
+/* ================= display options ================= */
+document.querySelectorAll('input[name="dir"]').forEach(r => r.onchange = () => { direction = document.querySelector('input[name="dir"]:checked').value; });
+document.getElementById("show-i").onchange = e => { showI = e.target.checked; };
+document.getElementById("show-v").onchange = e => { showV = e.target.checked; };
+document.getElementById("discharge").onclick = () => { for (const c of edges.values()) if (c.type === "capacitor") c.vc = 0; };
+
+/* ================= loop ================= */
+let lastT = null, uiClock = 0;
+function frame(ts){
+  if (lastT === null) lastT = ts;
+  const dt = Math.min(0.05, (ts - lastT)/1000); lastT = ts;
+  step(dt);
+  advanceDots(dt);
+  if (selKey && edges.has(selKey)){
+    const c = edges.get(selKey);
+    if (histKey !== selKey){ hist = []; histKey = selKey; }
+    hist.push({t: simT, V: c.type === "capacitor" ? c.vc : c.V, I: c.I});
+    while (hist.length && hist[0].t < simT - 10.5) hist.shift();
+  }
+  draw(dt); drawGraph();
+  uiClock += dt;
+  if (uiClock > 0.15){ uiClock = 0; updateMeasurements(); updateSummary(); }
+  requestAnimationFrame(frame);
+}
 
 window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => setTimeout(resize, 250));
-
-setInputs();
-updateReadout();
 resize();
-requestAnimationFrame(animate);
+if ((canvas.parentElement.clientWidth || 800) < 560){ showI = false; document.getElementById("show-i").checked = false; }
+TEMPLATES.series();
+renderSelected(); updateSummary();
+document.getElementById("hint").textContent = TMPL_NOTES.series;
+requestAnimationFrame(frame);
 })();
 </script>
 </body>
