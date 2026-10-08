@@ -1,0 +1,263 @@
+{
+  "configuration": {
+    "count": 512,
+    "radius": 5,
+    "softening": 0.06,
+    "sinkRadius": 0.16,
+    "hMin": 0.08,
+    "maxStep": 0.2,
+    "endTime": 250
+  },
+  "results": [
+    {
+      "name": "standard",
+      "time": 100,
+      "formed_kyr": 32.85796093292765,
+      "sink_Msun": 1.7734375,
+      "disk_Msun": 0.2265625,
+      "disk_radius_AU": 2110.0295687443604,
+      "R90_AU": 1893.1558440172905,
+      "steps": 1659
+    },
+    {
+      "name": "weak",
+      "time": 100,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 10492.922706241829,
+      "steps": 500
+    },
+    {
+      "name": "warm",
+      "time": 100,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 27504.30200075608,
+      "steps": 500
+    },
+    {
+      "name": "rapid",
+      "time": 100,
+      "formed_kyr": 35.70177260548982,
+      "sink_Msun": 1.03125,
+      "disk_Msun": 0.7109375,
+      "disk_radius_AU": 4947.620759349804,
+      "R90_AU": 5255.902061958391,
+      "steps": 1557
+    },
+    {
+      "name": "low",
+      "time": 100,
+      "formed_kyr": 32.51425637040413,
+      "sink_Msun": 1.9921875,
+      "disk_Msun": 0.0078125,
+      "disk_radius_AU": 630.3954191798451,
+      "R90_AU": 635.4869007639173,
+      "steps": 1115
+    },
+    {
+      "name": "strong gravity",
+      "time": 100,
+      "formed_kyr": 19.159920735623988,
+      "sink_Msun": 1.9453125,
+      "disk_Msun": 0.0546875,
+      "disk_radius_AU": 4392.969203846527,
+      "R90_AU": 4464.851682383649,
+      "steps": 1646
+    },
+    {
+      "name": "low mass",
+      "time": 100,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 10492.922706241829,
+      "steps": 500
+    },
+    {
+      "name": "repeat standard",
+      "time": 100,
+      "formed_kyr": 32.85796093292765,
+      "sink_Msun": 1.7734375,
+      "disk_Msun": 0.2265625,
+      "disk_radius_AU": 2110.0295687443604,
+      "R90_AU": 1893.1558440172905,
+      "steps": 1659
+    },
+    {
+      "name": "half maximum timestep",
+      "time": 100,
+      "formed_kyr": 32.400000000000105,
+      "sink_Msun": 1.7734375,
+      "disk_Msun": 0.21875,
+      "disk_radius_AU": 2295.4393305936283,
+      "R90_AU": 1918.8754970461655,
+      "steps": 1863
+    },
+    {
+      "name": "corner M0.5 G0.25 T8 w0",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 31004.128298959746,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G0.25 T8 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 42566.41102744452,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G0.25 T50 w0",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 91440.13033153456,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G0.25 T50 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 94587.49573513812,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G2 T8 w0",
+      "time": 250,
+      "formed_kyr": 56.000000000000085,
+      "sink_Msun": 0.478515625,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 8583.191284433427,
+      "steps": 1681
+    },
+    {
+      "name": "corner M0.5 G2 T8 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 30050.891370009762,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G2 T50 w0",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 85559.86044969311,
+      "steps": 1250
+    },
+    {
+      "name": "corner M0.5 G2 T50 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 89518.61288427674,
+      "steps": 1250
+    },
+    {
+      "name": "corner M4 G0.25 T8 w0",
+      "time": 250,
+      "formed_kyr": 56.000000000000085,
+      "sink_Msun": 3.828125,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 8583.191284433427,
+      "steps": 1681
+    },
+    {
+      "name": "corner M4 G0.25 T8 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 30050.891370009762,
+      "steps": 1250
+    },
+    {
+      "name": "corner M4 G0.25 T50 w0",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 85559.86044969311,
+      "steps": 1250
+    },
+    {
+      "name": "corner M4 G0.25 T50 w0.025",
+      "time": 249.9999999999931,
+      "formed_kyr": null,
+      "sink_Msun": 0,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 89518.61288427674,
+      "steps": 1250
+    },
+    {
+      "name": "corner M4 G2 T8 w0",
+      "time": 249.9999999999931,
+      "formed_kyr": 11.888775563923721,
+      "sink_Msun": 4,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 0,
+      "steps": 1574
+    },
+    {
+      "name": "corner M4 G2 T8 w0.025",
+      "time": 250,
+      "formed_kyr": 12.225992927069434,
+      "sink_Msun": 2.6015625,
+      "disk_Msun": 0.8828125,
+      "disk_radius_AU": 2128.7172251131174,
+      "R90_AU": 85545.50936673798,
+      "steps": 18666
+    },
+    {
+      "name": "corner M4 G2 T50 w0",
+      "time": 250,
+      "formed_kyr": 17.791028465235055,
+      "sink_Msun": 3.9921875,
+      "disk_Msun": 0,
+      "disk_radius_AU": 0,
+      "R90_AU": 529.3934172584693,
+      "steps": 7111
+    },
+    {
+      "name": "corner M4 G2 T50 w0.025",
+      "time": 250,
+      "formed_kyr": 18.44429293932658,
+      "sink_Msun": 3.4296875,
+      "disk_Msun": 0.078125,
+      "disk_radius_AU": 10900.90865779293,
+      "R90_AU": 22532.20204000412,
+      "steps": 6239
+    }
+  ]
+}
