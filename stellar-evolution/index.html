@@ -75,6 +75,7 @@
   td.num { font-variant-numeric: tabular-nums; }
   tr.current { background: rgba(255, 179, 71, 0.15); }
   tr.current td:first-child { font-weight: 600; }
+  td.more { color: var(--muted); font-style: italic; }
   .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   footer { padding: 4px 20px 20px; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
   footer a { color: var(--accent2); }
@@ -821,10 +822,15 @@ function buildTable() {
     const dur = last && (st.name === "White dwarf" || st.name === "Neutron star" || st.name === "Black hole")
       ? "indefinitely" : last && st.name === "Main sequence" ? "> 13.8 billion years (still going)" : fmtDur(st.t1 - st.t0);
     tr.innerHTML = `<td><span class="swatch" style="background:${STAGE_INFO[st.name].color}"></span>${st.name}</td>` +
-      `<td class="num">${fmtAge(st.t0, Math.min(st.t1 - st.t0, i ? st.t0 - TRACK.stages[i - 1].t0 : Infinity))}</td><td>${dur}</td>`;
+      `<td class="num">${fmtAge(st.t0, Math.min(st.t1 - st.t0, i ? st.t0 - TRACK.stages[i - 1].t0 : Infinity))}</td><td></td>`;
+    tr.dataset.dur = dur; tr.dataset.last = last ? "1" : "";
     tr.style.cursor = "pointer"; tr.onclick = () => { u = st.u0 + 1e-6; setPlaying(false); render(performance.now()); };
     tb.appendChild(tr);
   });
+  // placeholder shown while later stages are still hidden
+  const more = document.createElement("tr"); more.id = "stage-more";
+  more.innerHTML = '<td colspan="3" class="more">More stages ahead — press Play to keep going…</td>';
+  tb.appendChild(more);
 }
 
 function render(time) {
@@ -847,7 +853,15 @@ function render(time) {
   $("stage-desc").textContent = STAGE_INFO[s.stage].desc + (u === 0 ? "  " + TRACK.note : "");
   $("stage-name").parentElement.style.borderLeftColor = STAGE_INFO[s.stage].color === "#ffffff" ? "#ffb347" : STAGE_INFO[s.stage].color;
   const idx = TRACK.stages.indexOf(stageOf(TRACK, u));
-  document.querySelectorAll("#stage-table tr").forEach(r => r.classList.toggle("current", +r.dataset.i === idx));
+  // reveal the stages table as the star evolves
+  const done = u >= TRACK.U - 1e-9;
+  document.querySelectorAll("#stage-table tr[data-i]").forEach(r => {
+    const i = +r.dataset.i;
+    r.style.display = i <= idx ? "" : "none";
+    r.classList.toggle("current", i === idx);
+    r.cells[2].textContent = (i < idx || done || r.dataset.last) ? r.dataset.dur : "in progress…";
+  });
+  $("stage-more").style.display = idx < TRACK.stages.length - 1 ? "" : "none";
   $("scrub").value = Math.round(u / TRACK.U * 1000);
 }
 

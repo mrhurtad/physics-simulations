@@ -12,7 +12,7 @@ It was built for introductory astronomy courses and is inspired by [Star in a Bo
 - **Live readouts:** age, luminosity, surface temperature, radius, mass, and color.
 - **Inside the star:** an animated cutaway that shows the internal structure at each stage — the hydrogen-fusing core, the inert or degenerate helium core, the hydrogen- and helium-fusing shells, the carbon–oxygen core, the runaway helium flash, the exposed core of a planetary nebula, the white dwarf, and the "onion" shells and iron core of a massive star before it explodes. Fusing layers glow.
 - **Stage labels on the H–R diagram** mark where each stage begins (they can be turned off).
-- **Stages table** with the start age and duration of each stage. Click a row to jump to it.
+- **Stages table** that fills in as the star evolves: each stage appears when the star reaches it, with its start age, and its duration is shown once the stage is over. Click a row to jump back to it.
 - **Controls:** play and pause (or the space bar), speed, a timeline scrubber, and click-to-jump on the H–R diagram.
 - **Show all tracks** to compare masses on one diagram.
 - **Download data (CSV)** for the current star, for use in labs and spreadsheets.
