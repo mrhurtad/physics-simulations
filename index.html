@@ -29,7 +29,7 @@
   .intro{color:var(--ink-soft);margin:18px 0 26px;max-width:60ch}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-  a.card{
+  .card{
     display:block;background:var(--panel);border:1px solid var(--rule);border-radius:3px;
     padding:16px;text-decoration:none;color:inherit;transition:border-color .15s;
   }
@@ -39,8 +39,13 @@
     font-weight:600;margin-bottom:6px}
   .name{font-size:1.05rem;font-weight:600;margin-bottom:6px}
   .desc{font-size:0.87rem;color:var(--ink-soft)}
-  .soon{opacity:0.5}
-  .soon:hover{border-color:var(--rule)}
+  .soon{opacity:0.55;cursor:default}
+  a.card.soon:hover{border-color:var(--rule)}
+  .badge{display:inline-block;margin-left:8px;padding:1px 6px;border:1px solid var(--rule);border-radius:2px;
+    font-size:0.68rem;letter-spacing:0.03em;text-transform:uppercase;color:var(--ink-soft);font-weight:500}
+  h2.section{font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);
+    font-weight:600;margin:26px 0 10px;border-bottom:1px solid var(--rule);padding-bottom:4px}
+  h2.section:first-child{margin-top:0}
 
   footer{margin-top:36px;font-size:0.82rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:12px}
 </style>
@@ -55,11 +60,11 @@
     </div>
   </header>
   <p class="intro" id="t-intro">
-    Interactive, browser-based simulations for introductory physics. No installs — open on a
+    Interactive, browser-based simulations for introductory physics and astronomy. No installs — open on a
     computer, tablet, or phone.
   </p>
 
-  <div class="grid" id="grid"></div>
+  <div id="grid"></div>
 
   <footer id="t-foot">Built with plain HTML/JS/CSS — no dependencies, no build step.</footer>
 </div>
@@ -106,7 +111,8 @@ const SIMS = [
     name: {en:"Circuit Builder", es:"Constructor de Circuitos"},
     desc: {en:"Place batteries, resistors, bulbs, capacitors and switches anywhere on a grid and watch the circuit come alive. Compare series and parallel, find short circuits, and charge a capacitor.",
            es:"Coloca baterías, resistencias, focos, capacitores e interruptores donde quieras y observa el circuito en acción. Compara serie y paralelo, detecta cortocircuitos y carga un capacitor."},
-    href: "circuit-builder/"
+    href: "circuit-builder/",
+    soon: true
   },
   {
     topic: {en:"Astronomy", es:"Astronomía"},
@@ -124,15 +130,18 @@ const SIMS = [
   }
   // Add new simulations here, one object per entry:
   // { topic:{en:"...",es:"..."}, name:{en:"...",es:"..."}, desc:{en:"...",es:"..."}, href:"folder-name/" }
+  // Add soon:true to show a card as "Coming soon" without linking to a folder that does not exist yet.
 ];
 
 const STR = {
   en:{title:"Physics Simulations",
-      intro:"Interactive, browser-based simulations for introductory physics. No installs — open on a computer, tablet, or phone.",
-      foot:"Built with plain HTML/JS/CSS — no dependencies, no build step."},
+      intro:"Interactive, browser-based simulations for introductory physics and astronomy. No installs — open on a computer, tablet, or phone.",
+      foot:"Built with plain HTML/JS/CSS — no dependencies, no build step.",
+      soon:"Coming soon"},
   es:{title:"Simulaciones de Física",
-      intro:"Simulaciones interactivas para física introductoria, directamente en el navegador. Sin instalar nada — se abren en computadora, tablet o teléfono.",
-      foot:"Hechas con HTML/JS/CSS puro — sin dependencias, sin pasos de compilación."}
+      intro:"Simulaciones interactivas para física y astronomía introductorias, directamente en el navegador. Sin instalar nada — se abren en computadora, tablet o teléfono.",
+      foot:"Hechas con HTML/JS/CSS puro — sin dependencias, sin pasos de compilación.",
+      soon:"Próximamente"}
 };
 let lang = "en";
 
@@ -146,13 +155,26 @@ function render(){
 
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
-  SIMS.forEach(s => {
-    const a = document.createElement("a");
-    a.className = "card"; a.href = s.href;
-    a.innerHTML = '<div class="topic">' + s.topic[lang] + '</div>' +
-                  '<div class="name">' + s.name[lang] + '</div>' +
-                  '<div class="desc">' + s.desc[lang] + '</div>';
-    grid.appendChild(a);
+  // group cards by topic, keeping the order in which topics first appear
+  const topics = [];
+  SIMS.forEach(s => { if (!topics.includes(s.topic.en)) topics.push(s.topic.en); });
+  topics.forEach(t => {
+    const sims = SIMS.filter(s => s.topic.en === t);
+    const h = document.createElement("h2");
+    h.className = "section"; h.textContent = sims[0].topic[lang];
+    grid.appendChild(h);
+    const box = document.createElement("div");
+    box.className = "grid";
+    sims.forEach(s => {
+      const a = document.createElement(s.soon ? "div" : "a");
+      a.className = "card" + (s.soon ? " soon" : "");
+      if (!s.soon) a.href = s.href;
+      a.innerHTML = (s.soon ? '<div class="topic"><span class="badge" style="margin-left:0">' + STR[lang].soon + '</span></div>' : '') +
+                    '<div class="name">' + s.name[lang] + '</div>' +
+                    '<div class="desc">' + s.desc[lang] + '</div>';
+      box.appendChild(a);
+    });
+    grid.appendChild(box);
   });
 }
 document.getElementById("lang-en").onclick = () => { lang = "en"; render(); };
