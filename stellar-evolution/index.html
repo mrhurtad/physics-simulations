@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stellar Evolution Explorer</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #141b31;
+    --panel2: #1b2440;
+    --line: #2a3558;
+    --text: #e6e9f2;
+    --muted: #9aa3bf;
+    --accent: #ffb347;
+    --accent2: #6fc3ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 1.3rem; margin: 0; font-weight: 600; }
+  header .back { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+  header .back:hover { color: var(--accent2); }
+  header h1 span { color: var(--accent); }
+  .masses { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .masses .lbl { color: var(--muted); font-size: 0.9rem; margin-right: 4px; }
+  .masses button {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.9rem;
+  }
+  .masses button:hover { border-color: var(--accent2); }
+  .masses button.active { background: var(--accent); color: #1b1200; border-color: var(--accent); font-weight: 600; }
+  main {
+    display: grid; gap: 14px; padding: 14px 20px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .panel h2 { font-size: 0.95rem; margin: 0 0 8px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 6px; }
+  #hr { cursor: crosshair; }
+  .readouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .ro { background: var(--panel2); border-radius: 8px; padding: 8px 10px; }
+  .ro .k { font-size: 0.75rem; color: var(--muted); }
+  .ro .v { font-size: 1.05rem; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stage-now {
+    margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--panel2);
+    border-left: 4px solid var(--accent);
+  }
+  .stage-now .name { font-weight: 600; font-size: 1.05rem; }
+  .stage-now .desc { color: var(--muted); font-size: 0.88rem; margin-top: 4px; line-height: 1.4; }
+  .controls { grid-column: 1 / -1; }
+  .ctrl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .ctrl-row button {
+    background: var(--accent2); color: #04121f; border: none; border-radius: 6px;
+    padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 0.9rem;
+  }
+  .ctrl-row button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  .ctrl-row label { color: var(--muted); font-size: 0.88rem; display: flex; align-items: center; gap: 6px; }
+  .timeline-wrap { position: relative; margin-top: 12px; }
+  #bands { height: 14px; display: flex; border-radius: 4px; overflow: hidden; }
+  #bands div { height: 100%; }
+  #scrub { width: 100%; margin: 6px 0 0; }
+  .stages { grid-column: auto; }
+  .interior-cap { color: var(--muted); font-size: 0.88rem; margin-top: 8px; line-height: 1.45; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tr.current { background: rgba(255, 179, 71, 0.15); }
+  tr.current td:first-child { font-weight: 600; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  footer { padding: 4px 20px 20px; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+  footer a { color: var(--accent2); }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../">← Physics Simulations</a>
+  <h1>Stellar Evolution <span>Explorer</span></h1>
+  <div class="masses" id="masses"><span class="lbl">Initial mass (M<sub>☉</sub>):</span></div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Hertzsprung–Russell diagram <span style="float:right">click the track to jump</span></h2>
+    <canvas id="hr" width="760" height="600"></canvas>
+  </section>
+
+  <section class="panel">
+    <h2>Your star compared with the Sun</h2>
+    <canvas id="star" width="600" height="360"></canvas>
+    <div class="readouts">
+      <div class="ro"><div class="k">Age</div><div class="v" id="ro-age">—</div></div>
+      <div class="ro"><div class="k">Luminosity</div><div class="v" id="ro-L">—</div></div>
+      <div class="ro"><div class="k">Surface temperature</div><div class="v" id="ro-T">—</div></div>
+      <div class="ro"><div class="k">Radius</div><div class="v" id="ro-R">—</div></div>
+      <div class="ro"><div class="k">Mass</div><div class="v" id="ro-M">—</div></div>
+      <div class="ro"><div class="k">Color</div><div class="v" id="ro-C">—</div></div>
+    </div>
+    <div class="stage-now">
+      <div class="name" id="stage-name">—</div>
+      <div class="desc" id="stage-desc"></div>
+    </div>
+  </section>
+
+  <section class="panel controls">
+    <div class="ctrl-row">
+      <button id="play">▶ Play</button>
+      <button id="reset" class="secondary">⟲ Restart</button>
+      <label>Speed <input type="range" id="speed" min="0.25" max="4" step="0.25" value="1"> <span id="speed-v">1×</span></label>
+      <label><input type="checkbox" id="iso" checked> Isoradius lines</label>
+      <label><input type="checkbox" id="ms" checked> Main sequence</label>
+      <label><input type="checkbox" id="others"> Show all tracks</label>
+      <label><input type="checkbox" id="labels" checked> Stage labels</label>
+      <button id="csv" class="secondary">⬇ Download data (CSV)</button>
+    </div>
+    <div class="timeline-wrap">
+      <div id="bands"></div>
+      <input type="range" id="scrub" min="0" max="1000" step="1" value="0">
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Inside the star <span style="float:right">cutaway, not to scale</span></h2>
+    <canvas id="interior" width="620" height="330"></canvas>
+    <div class="interior-cap" id="interior-cap"></div>
+  </section>
+
+  <section class="panel stages">
+    <h2>Stages in your star's life</h2>
+    <table>
+      <thead><tr><th>Stage</th><th>Starts at</th><th>Lasts about</th></tr></thead>
+      <tbody id="stage-table"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer>
+  Evolutionary tracks are simplified, schematic models built for teaching. Values are approximate and are based on standard
+  stellar-evolution results for solar metallicity; they are not the output of a stellar-structure code. Ages are in millions of
+  years (Myr). Star sizes in the comparison panel use a compressed scale so that giants and white dwarfs fit on screen; the
+  radius readout gives the true value. Inspired by <a href="https://www.starinabox.net" target="_blank" rel="noopener">Star in a Box</a>.
+</footer>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ physics helpers */
+const T_SUN = 5772;
+const radiusFrom = (L, T) => Math.sqrt(L) / Math.pow(T / T_SUN, 2);       // R/Rsun
+const tempFrom = (L, R) => T_SUN * Math.pow(L / (R * R), 0.25);           // K
+
+/* ------------------------------------------------------------------ stage descriptions */
+const STAGE_INFO = {
+  "Main sequence": { color: "#ffd166", desc: "Hydrogen fuses into helium in the core. The star spends most of its life here, changing only slowly." },
+  "Subgiant": { color: "#f4a261", desc: "Core hydrogen is used up. Hydrogen now fuses in a shell around an inert helium core, and the star starts to expand and cool." },
+  "Red giant branch": { color: "#e76f51", desc: "The shell fuses hydrogen faster as the core contracts. The envelope swells enormously: the star becomes much more luminous even though its surface cools." },
+  "Helium flash": { color: "#ff4d6d", desc: "Helium ignites in the degenerate core and runs away within minutes. The core then expands, and the star settles onto the horizontal branch." },
+  "Horizontal branch": { color: "#c77dff", desc: "Helium fuses into carbon in the core while hydrogen fuses in a shell. The star is smaller and hotter than at the red giant tip." },
+  "Core helium burning": { color: "#c77dff", desc: "Helium fuses into carbon in the core. In stars of about 2 solar masses or more, helium ignites gently, without a flash." },
+  "Asymptotic giant branch": { color: "#ef476f", desc: "The core is now inert carbon and oxygen. Helium and hydrogen fuse in two shells, the star swells again, and strong winds strip away its outer layers." },
+  "Planetary nebula": { color: "#2ec4b6", desc: "The outer layers drift away and the hot core is exposed. Its ultraviolet light makes the ejected gas glow." },
+  "White dwarf": { color: "#bde0fe", desc: "The leftover carbon–oxygen core. No fusion: it shines only from stored heat and cools over billions of years at a fixed, Earth-like size." },
+  "Hertzsprung gap": { color: "#f4a261", desc: "Core hydrogen is exhausted. The star crosses quickly from hot to cool, so few stars are seen in this region of the diagram." },
+  "Red supergiant": { color: "#e63946", desc: "A huge, cool, very luminous star. The core fuses helium and, later, heavier elements in a sequence of shells." },
+  "Blue loop": { color: "#4cc9f0", desc: "While the core fuses helium, the star temporarily shrinks and heats up, looping to the left on the diagram. Many Cepheid variables are found here." },
+  "Blue supergiant": { color: "#4895ef", desc: "A very hot, very luminous star that has left the main sequence. Intense radiation drives powerful winds." },
+  "Luminous blue variable": { color: "#7209b7", desc: "An unstable phase with violent eruptions. The star loses huge amounts of mass." },
+  "Wolf–Rayet star": { color: "#3a0ca3", desc: "The star has lost its hydrogen envelope, exposing an extremely hot helium-rich surface." },
+  "Supernova": { color: "#ffffff", desc: "The iron core collapses in under a second. The rebound blasts the star apart; for a few weeks it can outshine a whole galaxy (about 10⁹ L☉)." },
+  "Neutron star": { color: "#adb5bd", desc: "The collapsed core: about 1.4–2 solar masses packed into a sphere about 20 km across. It is too faint to appear on this diagram." },
+  "Black hole": { color: "#495057", desc: "The core collapses so far that not even light escapes. Nothing is left to plot on the diagram." },
+};
+
+/* ------------------------------------------------------------------ evolutionary tracks
+   Each keyframe: t (Myr), L (Lsun), T (K) or R (Rsun, for white dwarfs), M (Msun), stage, w (display weight
+   of the segment that ENDS at this keyframe). The stage of a keyframe is the stage that STARTS there. */
+function wd(t, L, R, M, w) { return { t, L, T: tempFrom(L, R), M, stage: "White dwarf", w }; }
+
+const TRACKS = {
+  "0.5": {
+    note: "A 0.5 M☉ star burns hydrogen so slowly that it is still on the main sequence after 13.8 billion years — the present age of the Universe.",
+    keys: [
+      { t: 0, L: 0.038, T: 3800, M: 0.5, stage: "Main sequence" },
+      { t: 6000, L: 0.042, T: 3830, M: 0.5, stage: "Main sequence", w: 3 },
+      { t: 13800, L: 0.046, T: 3860, M: 0.5, stage: "Main sequence", w: 3 },
+    ],
+  },
+  "1": {
+    note: "The Sun's own future: red giant, helium flash, AGB, planetary nebula and white dwarf.",
+    keys: [
+      { t: 0, L: 0.70, T: 5600, M: 1.0, stage: "Main sequence" },
+      { t: 4600, L: 1.00, T: 5772, M: 1.0, stage: "Main sequence", w: 2 },
+      { t: 9000, L: 1.60, T: 5850, M: 1.0, stage: "Main sequence", w: 2 },
+      { t: 9600, L: 2.0, T: 5780, M: 1.0, stage: "Subgiant", w: 1 },
+      { t: 10200, L: 2.8, T: 4950, M: 1.0, stage: "Red giant branch", w: 1.2 },
+      { t: 10700, L: 30, T: 4450, M: 0.99, stage: "Red giant branch", w: 1.2 },
+      { t: 10950, L: 400, T: 3900, M: 0.93, stage: "Red giant branch", w: 1.2 },
+      { t: 11030, L: 2500, T: 3100, M: 0.75, stage: "Helium flash", w: 1.2 },
+      { t: 11030 + 1e-10, L: 50, T: 4800, M: 0.75, stage: "Horizontal branch", w: 0.8 },
+      { t: 11130, L: 55, T: 4700, M: 0.74, stage: "Asymptotic giant branch", w: 1.5 },
+      { t: 11140, L: 150, T: 4200, M: 0.72, stage: "Asymptotic giant branch", w: 0.8 },
+      { t: 11150, L: 1500, T: 3400, M: 0.65, stage: "Asymptotic giant branch", w: 1 },
+      { t: 11152, L: 5000, T: 3000, M: 0.54, stage: "Planetary nebula", w: 0.8 },
+      { t: 11152.015, L: 5000, T: 30000, M: 0.54, stage: "Planetary nebula", w: 0.8 },
+      { t: 11152.03, L: 3000, T: 100000, M: 0.54, stage: "Planetary nebula", w: 0.8 },
+      wd(11152.05, 100, 0.03, 0.54, 0.8),
+      wd(11160, 1, 0.0125, 0.54, 1),
+      wd(11300, 0.03, 0.0125, 0.54, 1),
+      wd(12000, 0.002, 0.0125, 0.54, 1),
+      wd(13800, 0.0005, 0.0125, 0.54, 1),
+    ],
+  },
+  "2": {
+    note: "A 2 M☉ star leaves the main sequence after about 1.2 billion years. Helium ignites gently, without a flash.",
+    keys: [
+      { t: 0, L: 16, T: 9100, M: 2.0, stage: "Main sequence" },
+      { t: 700, L: 21.4, T: 8200, M: 2.0, stage: "Main sequence", w: 2 },
+      { t: 1105, L: 26, T: 6770, M: 2.0, stage: "Main sequence", w: 1.5 },
+      { t: 1163, L: 35, T: 7330, M: 2.0, stage: "Subgiant", w: 0.8 },
+      { t: 1195, L: 32, T: 5200, M: 2.0, stage: "Red giant branch", w: 1 },
+      { t: 1215, L: 150, T: 4300, M: 1.99, stage: "Red giant branch", w: 1 },
+      { t: 1225, L: 250, T: 4100, M: 1.99, stage: "Core helium burning", w: 0.8 },
+      { t: 1230, L: 60, T: 4900, M: 1.98, stage: "Core helium burning", w: 0.8 },
+      { t: 1440, L: 80, T: 4800, M: 1.97, stage: "Asymptotic giant branch", w: 1.5 },
+      { t: 1470, L: 600, T: 3800, M: 1.9, stage: "Asymptotic giant branch", w: 1 },
+      { t: 1478, L: 4500, T: 3000, M: 0.64, stage: "Planetary nebula", w: 1 },
+      { t: 1478.015, L: 4500, T: 30000, M: 0.64, stage: "Planetary nebula", w: 0.8 },
+      { t: 1478.03, L: 2500, T: 100000, M: 0.64, stage: "Planetary nebula", w: 0.8 },
+      wd(1478.05, 100, 0.03, 0.64, 0.8),
+      wd(1490, 1, 0.0115, 0.64, 1),
+      wd(1700, 0.03, 0.0115, 0.64, 1),
+      wd(3500, 0.002, 0.0115, 0.64, 1),
+      wd(6000, 0.0006, 0.0115, 0.64, 1),
+    ],
+  },
+  "5": {
+    note: "An intermediate-mass star: a fast crossing of the Hertzsprung gap and a blue loop, but it still ends as a (massive) white dwarf.",
+    keys: [
+      { t: 0, L: 550, T: 17000, M: 5.0, stage: "Main sequence" },
+      { t: 60, L: 750, T: 16000, M: 5.0, stage: "Main sequence", w: 2 },
+      { t: 95, L: 1150, T: 13500, M: 4.98, stage: "Main sequence", w: 1.5 },
+      { t: 97, L: 1300, T: 14800, M: 4.98, stage: "Hertzsprung gap", w: 0.8 },
+      { t: 97.5, L: 1000, T: 5000, M: 4.97, stage: "Red giant branch", w: 1 },
+      { t: 98.5, L: 1100, T: 4300, M: 4.95, stage: "Blue loop", w: 0.8 },
+      { t: 103, L: 1400, T: 9500, M: 4.9, stage: "Blue loop", w: 1 },
+      { t: 112, L: 1500, T: 11000, M: 4.85, stage: "Blue loop", w: 1 },
+      { t: 117, L: 1600, T: 5000, M: 4.8, stage: "Asymptotic giant branch", w: 1 },
+      { t: 118, L: 2000, T: 4000, M: 4.7, stage: "Asymptotic giant branch", w: 0.8 },
+      { t: 119.5, L: 25000, T: 3100, M: 2.0, stage: "Asymptotic giant branch", w: 1 },
+      { t: 119.7, L: 30000, T: 3000, M: 0.95, stage: "Planetary nebula", w: 0.8 },
+      { t: 119.715, L: 30000, T: 40000, M: 0.95, stage: "Planetary nebula", w: 0.8 },
+      { t: 119.73, L: 15000, T: 110000, M: 0.95, stage: "Planetary nebula", w: 0.8 },
+      wd(119.75, 300, 0.03, 0.95, 0.8),
+      wd(121, 2, 0.008, 0.95, 1),
+      wd(300, 0.03, 0.008, 0.95, 1),
+      wd(1500, 0.002, 0.008, 0.95, 1),
+      wd(3000, 0.0007, 0.008, 0.95, 1),
+    ],
+  },
+  "10": {
+    note: "A massive star: a red supergiant with a blue loop, ending about 27 million years after birth in a core-collapse supernova that leaves a neutron star.",
+    keys: [
+      { t: 0, L: 5550, T: 25200, M: 10, stage: "Main sequence" },
+      { t: 15, L: 8000, T: 23500, M: 9.95, stage: "Main sequence", w: 2 },
+      { t: 22, L: 11000, T: 20500, M: 9.9, stage: "Main sequence", w: 1.5 },
+      { t: 22.5, L: 12500, T: 22000, M: 9.9, stage: "Hertzsprung gap", w: 0.8 },
+      { t: 22.6, L: 13000, T: 5000, M: 9.88, stage: "Red supergiant", w: 1 },
+      { t: 22.8, L: 16000, T: 3900, M: 9.85, stage: "Blue loop", w: 0.8 },
+      { t: 25, L: 25000, T: 9000, M: 9.6, stage: "Blue loop", w: 1.2 },
+      { t: 26.5, L: 28000, T: 4000, M: 9.3, stage: "Red supergiant", w: 1.2 },
+      { t: 27.0, L: 50000, T: 3500, M: 8.5, stage: "Supernova", w: 1 },
+      { t: 27.0000001, M: 1.37, stage: "Neutron star", remnant: true, w: 1.2 },
+      { t: 30, M: 1.37, stage: "Neutron star", remnant: true, w: 1 },
+    ],
+  },
+  "20": {
+    note: "A 20 M☉ star lives only about 10 million years, swells into a red supergiant, and explodes as a supernova.",
+    keys: [
+      { t: 0, L: 45000, T: 34500, M: 20, stage: "Main sequence" },
+      { t: 6, L: 70000, T: 31000, M: 19.5, stage: "Main sequence", w: 2 },
+      { t: 9, L: 110000, T: 26000, M: 19, stage: "Main sequence", w: 1.5 },
+      { t: 9.2, L: 120000, T: 27500, M: 18.9, stage: "Hertzsprung gap", w: 0.8 },
+      { t: 9.3, L: 125000, T: 6000, M: 18.7, stage: "Red supergiant", w: 1 },
+      { t: 9.5, L: 140000, T: 3800, M: 18, stage: "Red supergiant", w: 0.8 },
+      { t: 10.3, L: 180000, T: 3600, M: 14, stage: "Red supergiant", w: 1.2 },
+      { t: 10.5, L: 200000, T: 3500, M: 13, stage: "Supernova", w: 1 },
+      { t: 10.5000001, M: 1.6, stage: "Neutron star", remnant: true, w: 1.2 },
+      { t: 12, M: 1.6, stage: "Neutron star", remnant: true, w: 1 },
+    ],
+  },
+  "40": {
+    note: "A very massive star never becomes a red supergiant: winds strip its envelope, it becomes a Wolf–Rayet star, and its core collapses into a black hole.",
+    keys: [
+      { t: 0, L: 220000, T: 43000, M: 40, stage: "Main sequence" },
+      { t: 3, L: 300000, T: 40000, M: 38, stage: "Main sequence", w: 2 },
+      { t: 4.5, L: 420000, T: 32000, M: 36, stage: "Main sequence", w: 1.5 },
+      { t: 4.6, L: 450000, T: 34000, M: 35.5, stage: "Blue supergiant", w: 0.8 },
+      { t: 4.8, L: 500000, T: 15000, M: 30, stage: "Blue supergiant", w: 1 },
+      { t: 5.0, L: 550000, T: 9000, M: 22, stage: "Luminous blue variable", w: 1 },
+      { t: 5.2, L: 500000, T: 60000, M: 18, stage: "Wolf–Rayet star", w: 1 },
+      { t: 5.6, L: 450000, T: 110000, M: 14, stage: "Supernova", w: 1.2 },
+      { t: 5.6000001, M: 10, stage: "Black hole", remnant: true, w: 1.2 },
+      { t: 7, M: 10, stage: "Black hole", remnant: true, w: 1 },
+    ],
+  },
+};
+
+const ZAMS = [ [3200, 0.006], [3800, 0.038], [4500, 0.16], [5600, 0.70], [6500, 2.5], [9100, 16], [12500, 90],
+               [17000, 550], [25200, 5550], [34500, 45000], [43000, 220000], [47000, 450000] ];
+
+/* ------------------------------------------------------------------ build per-track derived data */
+for (const tr of Object.values(TRACKS)) {
+  const k = tr.keys;
+  // cumulative display parameter
+  let u = 0;
+  k.forEach((p, i) => { if (i > 0) u += (p.w ?? 1); p.u = u; });
+  tr.U = u;
+  // stage spans (stage of segment i = stage of keyframe i)
+  tr.stages = [];
+  k.forEach((p, i) => {
+    const last = tr.stages[tr.stages.length - 1];
+    if (!last || last.name !== p.stage) {
+      if (last) { last.t1 = p.t; last.u1 = p.u; }
+      tr.stages.push({ name: p.stage, t0: p.t, u0: p.u });
+    }
+  });
+  const end = tr.stages[tr.stages.length - 1];
+  end.t1 = k[k.length - 1].t; end.u1 = k[k.length - 1].u;
+}
+
+/* ------------------------------------------------------------------ state at display parameter u */
+function stateAt(tr, u) {
+  const k = tr.keys;
+  u = Math.max(0, Math.min(tr.U, u));
+  let i = 0;
+  while (i < k.length - 2 && k[i + 1].u < u) i++;
+  const a = k[i], b = k[i + 1];
+  const f = b.u === a.u ? 0 : (u - a.u) / (b.u - a.u);
+  const s = { t: a.t + f * (b.t - a.t), M: a.M + f * (b.M - a.M), stage: a.stage, seg: i, segDt: b.t - a.t };
+  if (a.remnant) { s.remnant = true; return s; }
+  if (a.stage === "Supernova") { s.M = a.M; s.supernova = true; s.f = f; s.L = a.L; s.T = a.T; s.R = radiusFrom(a.L, a.T); return s; }
+  const lL = Math.log10(a.L) + f * (Math.log10(b.L) - Math.log10(a.L));
+  const lT = Math.log10(a.T) + f * (Math.log10(b.T) - Math.log10(a.T));
+  s.L = Math.pow(10, lL); s.T = Math.pow(10, lT); s.R = radiusFrom(s.L, s.T);
+  return s;
+}
+function stageOf(tr, u) {
+  for (const st of tr.stages) if (u >= st.u0 && u < st.u1) return st;
+  return tr.stages[tr.stages.length - 1];
+}
+
+/* ------------------------------------------------------------------ colour of a blackbody (approx.) */
+function bbColor(T) {
+  const t = Math.max(1000, Math.min(40000, T)) / 100;
+  let r, g, b;
+  if (t <= 66) { r = 255; g = 99.47 * Math.log(t) - 161.12; b = t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04; }
+  else { r = 329.70 * Math.pow(t - 60, -0.1332); g = 288.12 * Math.pow(t - 60, -0.0755); b = 255; }
+  const c = v => Math.round(Math.max(0, Math.min(255, v)));
+  return [c(r), c(g), c(b)];
+}
+const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function colorName(T) {
+  if (T >= 25000) return "Blue"; if (T >= 10000) return "Blue-white"; if (T >= 7500) return "White";
+  if (T >= 6000) return "Yellow-white"; if (T >= 5000) return "Yellow"; if (T >= 3700) return "Orange"; return "Red";
+}
+
+/* ------------------------------------------------------------------ number formatting */
+function fmtSci(x, digits = 2) {
+  if (x >= 1000 && x < 100000) return Math.round(x).toLocaleString("en-US");
+  if (x >= 0.01 && x < 1000) return x.toPrecision(digits + 1).replace(/\.0+$|(\.\d*?)0+$/, "$1");
+  const e = Math.floor(Math.log10(x)), m = x / Math.pow(10, e);
+  const sup = String(e).replace(/-/g, "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  return `${m.toFixed(1)}×10${sup}`;
+}
+function fmtAge(t, segDt) {
+  const d = segDt < 0.1 ? 4 : segDt < 2 ? 3 : segDt < 50 ? 2 : t < 100 ? 1 : 0;
+  return t.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) + " Myr";
+}
+function fmtDur(dt) {
+  const yr = dt * 1e6;
+  if (yr * 365.25 < 1) return "minutes to hours";
+  if (yr < 1) return `about ${Math.round(yr * 365.25)} days`;
+  if (yr < 1e3) return `${Math.round(yr)} years`;
+  if (yr < 1e6) return `${Math.round(yr / 1e3).toLocaleString()} thousand years`;
+  if (yr < 1e9) return `${+(yr / 1e6).toPrecision(2)} million years`;
+  return `${+(yr / 1e9).toPrecision(2)} billion years`;
+}
+
+/* ------------------------------------------------------------------ HR diagram */
+const hr = document.getElementById("hr"), hctx = hr.getContext("2d");
+const HR = { x0: 70, y0: 20, w: 670, h: 520, lTmax: Math.log10(130000), lTmin: Math.log10(2200), lLmin: -5, lLmax: 7 };
+const hx = T => HR.x0 + (HR.lTmax - Math.log10(T)) / (HR.lTmax - HR.lTmin) * HR.w;
+const hy = L => HR.y0 + (HR.lLmax - Math.log10(L)) / (HR.lLmax - HR.lLmin) * HR.h;
+
+function drawHRBackground(opts) {
+  const c = hctx;
+  c.clearRect(0, 0, hr.width, hr.height);
+  c.fillStyle = "#070b18"; c.fillRect(HR.x0, HR.y0, HR.w, HR.h);
+  // spectral colour strip along the top
+  for (let i = 0; i < HR.w; i += 2) {
+    const lT = HR.lTmax - i / HR.w * (HR.lTmax - HR.lTmin);
+    c.fillStyle = rgb(bbColor(Math.pow(10, lT)), 0.9); c.fillRect(HR.x0 + i, HR.y0, 2, 5);
+  }
+  c.save(); c.beginPath(); c.rect(HR.x0, HR.y0, HR.w, HR.h); c.clip();
+  // grid
+  c.strokeStyle = "#1a2342"; c.lineWidth = 1;
+  for (let e = HR.lLmin; e <= HR.lLmax; e++) { c.beginPath(); c.moveTo(HR.x0, hy(10 ** e)); c.lineTo(HR.x0 + HR.w, hy(10 ** e)); c.stroke(); }
+  for (const T of [3000, 5000, 10000, 20000, 50000, 100000]) { c.beginPath(); c.moveTo(hx(T), HR.y0); c.lineTo(hx(T), HR.y0 + HR.h); c.stroke(); }
+  // isoradius lines
+  if (opts.iso) {
+    c.setLineDash([4, 5]); c.strokeStyle = "rgba(120,200,140,0.45)"; c.fillStyle = "rgba(140,220,160,0.8)"; c.font = "11px system-ui";
+    for (const R of [0.001, 0.01, 0.1, 1, 10, 100, 1000]) {
+      const Ls = T => R * R * Math.pow(T / T_SUN, 4);
+      c.beginPath(); c.moveTo(hx(130000), hy(Ls(130000))); c.lineTo(hx(2200), hy(Ls(2200))); c.stroke();
+      // label where the line is inside the box
+      for (let T = 2600; T < 120000; T *= 1.15) {
+        const y = hy(Ls(T));
+        if (y > HR.y0 + 14 && y < HR.y0 + HR.h - 6) { c.fillText(`${R} R☉`, hx(T) - 34, y - 4); break; }
+      }
+    }
+    c.setLineDash([]);
+  }
+  // main sequence band
+  if (opts.ms) {
+    c.strokeStyle = "rgba(255,255,255,0.13)"; c.lineWidth = 16; c.lineCap = "round"; c.lineJoin = "round";
+    c.beginPath(); ZAMS.forEach(([T, L], i) => (i ? c.lineTo : c.moveTo).call(c, hx(T), hy(L) - 6)); c.stroke();
+    c.lineWidth = 1; c.fillStyle = "rgba(255,255,255,0.35)"; c.font = "italic 12px system-ui";
+    c.save(); c.translate(hx(9500), hy(25) + 26); c.rotate(-0.62); c.fillText("main sequence", 0, 0); c.restore();
+  }
+  // all tracks (faint)
+  if (opts.others) for (const [m, tr] of Object.entries(TRACKS)) if (m !== current) drawTrack(tr, tr.U, "rgba(160,170,200,0.25)", 1);
+  // the Sun
+  c.strokeStyle = "#ffd166"; c.lineWidth = 1.5; c.beginPath(); c.arc(hx(T_SUN), hy(1), 5, 0, 7); c.stroke();
+  c.fillStyle = "#ffd166"; c.beginPath(); c.arc(hx(T_SUN), hy(1), 1.5, 0, 7); c.fill();
+  c.font = "11px system-ui"; c.fillText("Sun today", hx(T_SUN) + 8, hy(1) + 14);
+  c.restore();
+  // axes and labels
+  c.strokeStyle = "#5a668c"; c.lineWidth = 1; c.strokeRect(HR.x0, HR.y0, HR.w, HR.h);
+  c.fillStyle = "#c3c9dc"; c.font = "12px system-ui"; c.textAlign = "right";
+  for (let e = HR.lLmin; e <= HR.lLmax; e++) {
+    const y = hy(10 ** e);
+    c.fillText(e === 0 ? "1" : `10${String(e).replace("-", "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d])}`, HR.x0 - 6, y + 4);
+  }
+  c.textAlign = "center";
+  for (const T of [3000, 5000, 10000, 20000, 50000, 100000]) c.fillText(T.toLocaleString(), hx(T), HR.y0 + HR.h + 16);
+  c.font = "13px system-ui";
+  c.fillText("Surface temperature (K)", HR.x0 + HR.w / 2, HR.y0 + HR.h + 36);
+  c.save(); c.translate(18, HR.y0 + HR.h / 2); c.rotate(-Math.PI / 2); c.fillText("Luminosity (L☉)", 0, 0); c.restore();
+  c.textAlign = "left";
+}
+
+function trackPoints(tr, uMax) {
+  const pts = [];
+  const k = tr.keys;
+  for (let i = 0; i < k.length - 1; i++) {
+    const a = k[i], b = k[i + 1];
+    if (a.remnant || a.stage === "Supernova") continue;
+    if (a.u >= uMax) break;
+    const steps = 24;
+    for (let j = 0; j <= steps; j++) {
+      const u = a.u + (b.u - a.u) * j / steps;
+      if (u > uMax) { const s = stateAt(tr, uMax); pts.push([s.T, s.L, s.stage, uMax]); break; }
+      const s = stateAt(tr, Math.min(u, b.u - 1e-9));
+      pts.push([s.T, s.L, a.stage, u]);
+    }
+  }
+  return pts;
+}
+function drawTrack(tr, uMax, color, width) {
+  const pts = trackPoints(tr, uMax);
+  const c = hctx; c.lineWidth = width; c.lineJoin = "round";
+  for (let i = 1; i < pts.length; i++) {
+    c.strokeStyle = color || STAGE_INFO[pts[i][2]].color;
+    c.beginPath(); c.moveTo(hx(pts[i - 1][0]), hy(pts[i - 1][1])); c.lineTo(hx(pts[i][0]), hy(pts[i][1])); c.stroke();
+  }
+}
+
+function drawHR(s) {
+  drawHRBackground({ iso: $("iso").checked, ms: $("ms").checked, others: $("others").checked });
+  const c = hctx;
+  c.save(); c.beginPath(); c.rect(HR.x0, HR.y0, HR.w, HR.h); c.clip();
+  // full path ghost, then travelled part in stage colours
+  drawTrack(TRACK, TRACK.U, "rgba(255,255,255,0.12)", 1.5);
+  drawTrack(TRACK, u, null, 2.5);
+  if ($("labels").checked) drawStageLabels();
+  if (s.remnant || s.supernova) {
+    c.fillStyle = "#e6e9f2"; c.font = "14px system-ui"; c.textAlign = "center";
+    const msg = s.supernova ? "Supernova! (peak ≈ 10⁹ L☉, off the top of the diagram)" : `${s.stage}: too faint to plot`;
+    c.fillText(msg, HR.x0 + HR.w / 2, HR.y0 + 40); c.textAlign = "left";
+  } else {
+    const x = hx(s.T), y = hy(s.L), col = bbColor(s.T);
+    const g = c.createRadialGradient(x, y, 0, x, y, 16);
+    g.addColorStop(0, rgb(col, 0.9)); g.addColorStop(1, rgb(col, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 16, 0, 7); c.fill();
+    c.fillStyle = rgb(col); c.strokeStyle = "#fff"; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); c.stroke();
+  }
+  c.restore();
+}
+
+/* ------------------------------------------------------------------ star view */
+const sv = document.getElementById("star"), sctx = sv.getContext("2d");
+const bgStars = Array.from({ length: 140 }, () => [Math.random() * sv.width, Math.random() * sv.height, Math.random() * 1.2 + 0.2, Math.random()]);
+const pxRadius = R => Math.max(1.5, 26 * Math.pow(R, 0.28));   // compressed scale
+
+function drawStarBody(c, x, y, r, T) {
+  const col = bbColor(T);
+  const glow = c.createRadialGradient(x, y, r * 0.6, x, y, r * 1.9);
+  glow.addColorStop(0, rgb(col, 0.45)); glow.addColorStop(1, rgb(col, 0));
+  c.fillStyle = glow; c.beginPath(); c.arc(x, y, r * 1.9, 0, 7); c.fill();
+  const body = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  body.addColorStop(0, "rgba(255,255,255,0.95)"); body.addColorStop(0.35, rgb(col)); body.addColorStop(1, rgb(col.map(v => v * 0.6)));
+  c.fillStyle = body; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+}
+
+function drawStar(s, time) {
+  const c = sctx, W = sv.width, H = sv.height;
+  c.fillStyle = "#04060e"; c.fillRect(0, 0, W, H);
+  for (const [x, y, r, p] of bgStars) {
+    c.fillStyle = `rgba(255,255,255,${0.25 + 0.35 * Math.abs(Math.sin(time / 1500 + p * 6))})`;
+    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+  }
+  const sunX = W - 62, cy = H / 2, starX = (W - 110) / 2;
+  // Sun for reference
+  drawStarBody(c, sunX, cy, pxRadius(1), T_SUN);
+  c.fillStyle = "#c3c9dc"; c.font = "12px system-ui"; c.textAlign = "center";
+  c.fillText("Sun", sunX, cy + pxRadius(1) + 22);
+  c.strokeStyle = "rgba(255,255,255,0.12)"; c.beginPath(); c.moveTo(W - 120, 20); c.lineTo(W - 120, H - 20); c.stroke();
+
+  const st = stageOf(TRACK, u);
+  const prog = (u - st.u0) / Math.max(1e-9, st.u1 - st.u0);
+
+  if (s.supernova) {
+    const p = s.f;
+    const R = 40 + p * 260, a = Math.max(0, 1 - p);
+    const g = c.createRadialGradient(starX, cy, 0, starX, cy, R);
+    g.addColorStop(0, `rgba(255,255,255,${a})`); g.addColorStop(0.3, `rgba(255,230,180,${a * 0.8})`);
+    g.addColorStop(0.7, `rgba(255,120,60,${a * 0.4})`); g.addColorStop(1, "rgba(255,60,30,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(starX, cy, R, 0, 7); c.fill();
+    c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 2;
+    for (let i = 0; i < 16; i++) { const an = i * Math.PI / 8; c.beginPath(); c.moveTo(starX + Math.cos(an) * R * 0.2, cy + Math.sin(an) * R * 0.2); c.lineTo(starX + Math.cos(an) * R * (i % 2 ? 0.55 : 0.9), cy + Math.sin(an) * R * (i % 2 ? 0.55 : 0.9)); c.stroke(); }
+  } else if (s.remnant) {
+    // expanding supernova remnant shell
+    const k = Math.min(1, prog * 1.5);
+    const sh = c.createRadialGradient(starX, cy, 40 + 100 * k, starX, cy, 70 + 120 * k);
+    sh.addColorStop(0, "rgba(255,120,80,0)"); sh.addColorStop(0.6, `rgba(255,120,80,${0.35 * (1 - k * 0.7)})`); sh.addColorStop(1, "rgba(120,180,255,0)");
+    c.fillStyle = sh; c.beginPath(); c.arc(starX, cy, 70 + 120 * k, 0, 7); c.fill();
+    if (s.stage === "Neutron star") {
+      const an = time / 300;
+      c.strokeStyle = "rgba(170,210,255,0.7)"; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(starX - Math.cos(an) * 90, cy - Math.sin(an) * 40); c.lineTo(starX + Math.cos(an) * 90, cy + Math.sin(an) * 40); c.stroke();
+      drawStarBody(c, starX, cy, 3, 1e6);
+    } else {
+      c.strokeStyle = "rgba(255,170,80,0.85)"; c.lineWidth = 5;
+      c.beginPath(); c.ellipse(starX, cy, 46, 12, -0.15, 0, 7); c.stroke();
+      c.fillStyle = "#000"; c.beginPath(); c.arc(starX, cy, 16, 0, 7); c.fill();
+      c.strokeStyle = "rgba(255,210,150,0.8)"; c.lineWidth = 1.5; c.beginPath(); c.arc(starX, cy, 18, 0, 7); c.stroke();
+      c.strokeStyle = "rgba(255,170,80,0.85)"; c.lineWidth = 5;
+      c.beginPath(); c.ellipse(starX, cy, 46, 12, -0.15, Math.PI * 1.02, Math.PI * 1.98); c.stroke();
+    }
+  } else {
+    // planetary nebula shell (during the PN stage and fading early in the white dwarf stage)
+    let neb = 0, nebA = 0;
+    if (s.stage === "Planetary nebula") { neb = prog; nebA = 0.8; }
+    else if (s.stage === "White dwarf") {
+      const wdSt = stageOf(TRACK, u);
+      const q = (u - wdSt.u0) / Math.max(1e-9, (wdSt.u1 - wdSt.u0) * 0.35);
+      if (q < 1 && TRACK.stages.some(x => x.name === "Planetary nebula")) { neb = 1 + q; nebA = 0.8 * (1 - q); }
+    }
+    if (nebA > 0) {
+      const R = 30 + neb * 70;
+      const g = c.createRadialGradient(starX, cy, R * 0.45, starX, cy, R);
+      g.addColorStop(0, "rgba(40,120,200,0)"); g.addColorStop(0.6, `rgba(46,196,182,${nebA * 0.55})`);
+      g.addColorStop(0.85, `rgba(239,71,111,${nebA * 0.45})`); g.addColorStop(1, "rgba(239,71,111,0)");
+      c.fillStyle = g; c.beginPath(); c.arc(starX, cy, R, 0, 7); c.fill();
+    }
+    const r = pxRadius(s.R);
+    if (r > starX - 8) { // too big: show as a filled arc
+      c.save(); c.beginPath(); c.rect(0, 0, W - 121, H); c.clip(); drawStarBody(c, starX, cy, r, s.T); c.restore();
+    } else drawStarBody(c, starX, cy, r, s.T);
+    // flash marker
+    if (s.stage === "Helium flash") {
+      c.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(time / 80)})`;
+      c.beginPath(); c.arc(starX, cy, Math.max(3, r * 0.08), 0, 7); c.fill();
+    }
+  }
+  c.fillStyle = "#c3c9dc"; c.font = "12px system-ui"; c.textAlign = "center";
+  c.fillText("Your star", starX, H - 12);
+  c.textAlign = "left"; c.fillStyle = "rgba(195,201,220,0.6)"; c.font = "10px system-ui";
+  c.fillText("sizes on a compressed scale", 8, 14);
+}
+
+
+/* ------------------------------------------------------------------ interior structure (cutaway) */
+const iv = document.getElementById("interior"), ictx = iv.getContext("2d");
+const C = {
+  H: "#ffe066", He: "#ff8c42", inertHe: "#d9e2ec", degHe: "#9bbcff", CO: "#4361ee", C: "#52b788",
+  ONe: "#2a9d8f", Si: "#9d4edd", Fe: "#6c757d"
+};
+// Each layer: r (fraction of the drawn radius, outer edge), color, label, fusing (glows)
+function interiorFor(s) {
+  const st = stageOf(TRACK, u), idx = TRACK.stages.indexOf(st);
+  const next = TRACK.stages[idx + 1], prog = (u - st.u0) / Math.max(1e-9, st.u1 - st.u0);
+  const lowMass = +current <= 2.2;
+  const env = { r: 1, color: null, label: "Hydrogen-rich envelope" };
+  const onionLate = next && next.name === "Supernova" && prog > (st.name === "Wolf–Rayet star" ? 0.3 : 0.6);
+  switch (s.stage) {
+    case "Main sequence":
+      return { layers: [{ ...env, label: "Envelope: mostly hydrogen" }, { r: 0.28, color: C.H, label: "Core: hydrogen → helium", fusing: true }],
+        cap: "Hydrogen fuses into helium in the core. The pressure from this energy balances gravity, so the star stays stable for most of its life." };
+    case "Subgiant": case "Hertzsprung gap":
+      return { layers: [env, { r: 0.3, color: C.H, label: "Hydrogen-fusing shell", fusing: true }, { r: 0.22, color: C.inertHe, label: "Inert helium core (contracting)" }],
+        cap: "The core has run out of hydrogen. With no fusion it contracts and heats up, and hydrogen now fuses in a shell around it." };
+    case "Red giant branch":
+      return { layers: [env, { r: 0.28, color: C.H, label: "Hydrogen-fusing shell", fusing: true },
+        { r: 0.2, color: lowMass ? C.degHe : C.inertHe, label: lowMass ? "Degenerate helium core" : "Inert helium core (contracting)" }],
+        cap: lowMass ? "The helium core is electron degenerate: its pressure no longer depends on temperature. The shell fuses hydrogen faster and faster, and the envelope swells." :
+          "The helium core keeps contracting and heating while hydrogen fuses in a shell; the envelope swells to giant size." };
+    case "Helium flash":
+      return { layers: [env, { r: 0.28, color: C.H, label: "Hydrogen-fusing shell", fusing: true }, { r: 0.2, color: "#ff2d55", label: "Runaway He fusion (degenerate core)", fusing: true, flash: true }],
+        cap: "Helium ignites in the degenerate core. Because heating does not raise the pressure, the core cannot expand to cool itself, and fusion runs away within minutes." };
+    case "Horizontal branch": case "Core helium burning": case "Blue loop":
+      return { layers: [env, { r: 0.32, color: C.H, label: "Hydrogen-fusing shell", fusing: true }, { r: 0.23, color: C.He, label: "Core: helium → carbon, oxygen", fusing: true }],
+        cap: "Helium fuses into carbon and oxygen in the core (triple-alpha process) while hydrogen keeps fusing in a shell." };
+    case "Asymptotic giant branch":
+      return { layers: [env, { r: 0.32, color: C.H, label: "Hydrogen-fusing shell", fusing: true }, { r: 0.24, color: C.He, label: "Helium-fusing shell", fusing: true },
+        { r: 0.16, color: C.CO, label: lowMass ? "Degenerate C–O core" : "Carbon–oxygen core" }],
+        cap: "The carbon–oxygen core is inert. Two shells fuse helium and hydrogen. The core never gets hot enough to fuse carbon, and strong winds strip the envelope." };
+    case "Planetary nebula":
+      return { nebula: true, layers: [{ r: 0.32, color: C.CO, label: "Hot, exposed carbon–oxygen core" }],
+        cap: "The envelope has been ejected and drifts away as a glowing shell. The bare core is extremely hot and lights up the gas with ultraviolet radiation." };
+    case "White dwarf":
+      return { layers: [{ r: 0.32, color: C.CO, label: "Degenerate carbon–oxygen: no fusion" }], small: true,
+        cap: "Only the degenerate core is left. Electron degeneracy pressure holds it up; with no fusion, it simply radiates away its stored heat." };
+    case "Red supergiant": case "Blue supergiant": case "Luminous blue variable": case "Wolf–Rayet star": {
+      const noEnv = s.stage === "Wolf–Rayet star";
+      if (onionLate) {
+        const L = noEnv
+          ? [{ r: 1, color: C.He, label: "He → C, O shell (H envelope lost)", fusing: true },
+             { r: 0.74, color: C.C, label: "C → Ne, O shell", fusing: true },
+             { r: 0.54, color: C.ONe, label: "O, Ne → Si shell", fusing: true },
+             { r: 0.36, color: C.Si, label: "Si → Fe shell", fusing: true },
+             { r: 0.2, color: C.Fe, label: "Iron core (no energy from fusion)" }]
+          : [{ ...env, label: "Hydrogen envelope" },
+             { r: 0.4, color: C.H, label: "H → He shell", fusing: true },
+             { r: 0.33, color: C.He, label: "He → C, O shell", fusing: true },
+             { r: 0.26, color: C.C, label: "C → Ne, O shell", fusing: true },
+             { r: 0.19, color: C.ONe, label: "O, Ne → Si shell", fusing: true },
+             { r: 0.12, color: C.Si, label: "Si → Fe shell", fusing: true },
+             { r: 0.06, color: C.Fe, label: "Iron core (no energy from fusion)" }];
+        return { layers: L, cap: "Late in its life a massive star is layered like an onion, with shells fusing ever heavier elements. Fusing iron releases no energy, so the iron core grows until it collapses." };
+      }
+      return { layers: noEnv
+          ? [{ r: 1, color: C.He, label: "Helium-rich surface (envelope lost)" }, { r: 0.35, color: C.He, label: "Core: helium → carbon, oxygen", fusing: true }]
+          : [{ ...env, label: s.stage === "Red supergiant" ? "Huge, cool hydrogen envelope" : "Hydrogen envelope (being lost in winds)" },
+             { r: 0.3, color: C.H, label: "Hydrogen-fusing shell", fusing: true }, { r: 0.21, color: C.He, label: "Core: helium → carbon, oxygen", fusing: true }],
+        cap: "The core fuses helium while hydrogen fuses in a shell. Massive stars are hot enough to go on to fuse carbon and heavier elements later." };
+    }
+    case "Supernova":
+      return { collapse: true, layers: [], cap: "The iron core collapses in less than a second, from Earth size to about 20 km. The infalling layers rebound and a shock wave blows the star apart." };
+    default:
+      return { layers: [], remnant: true, cap: s.stage === "Neutron star"
+        ? "A neutron star is made almost entirely of neutrons packed to nuclear density: about 1.4–2 solar masses in a sphere about 20 km across."
+        : "A black hole: the core collapsed so far that nothing, not even light, can escape from inside the event horizon." };
+  }
+}
+
+function drawInterior(s, time) {
+  const c = ictx, W = iv.width, H = iv.height;
+  c.clearRect(0, 0, W, H); c.fillStyle = "#04060e"; c.fillRect(0, 0, W, H);
+  const info = interiorFor(s);
+  $("interior-cap").textContent = info.cap;
+  const cx = 165, cy = H / 2, R = 135;
+  c.font = "13px system-ui"; c.textBaseline = "middle";
+
+  if (info.remnant || info.collapse) {
+    if (info.collapse) {
+      const k = (time / 900) % 1;
+      for (let i = 0; i < 18; i++) {
+        const a = i * Math.PI / 9;
+        c.strokeStyle = "rgba(255,200,120,0.7)"; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(cx + Math.cos(a) * R * (1 - k * 0.6), cy + Math.sin(a) * R * (1 - k * 0.6));
+        c.lineTo(cx + Math.cos(a) * R * (0.75 - k * 0.6), cy + Math.sin(a) * R * (0.75 - k * 0.6)); c.stroke();
+      }
+      c.fillStyle = C.Fe; c.beginPath(); c.arc(cx, cy, 30 * (1 - k * 0.8) + 4, 0, 7); c.fill();
+      c.fillStyle = "#e6e9f2"; c.fillText("Iron core collapsing", 330, cy);
+    } else {
+      c.fillStyle = s.stage === "Neutron star" ? "#cfd8e3" : "#000";
+      c.strokeStyle = s.stage === "Neutron star" ? "#fff" : "rgba(255,170,80,0.9)"; c.lineWidth = 2;
+      c.beginPath(); c.arc(cx, cy, 30, 0, 7); c.fill(); c.stroke();
+      c.fillStyle = "#e6e9f2"; c.fillText(s.stage === "Neutron star" ? "Neutrons at nuclear density" : "Event horizon", 330, cy);
+    }
+    return;
+  }
+
+  const envCol = bbColor(s.T || 5000);
+  const layers = info.layers.map(l => ({ ...l, color: l.color || rgb(envCol.map(v => v * 0.85)) }));
+  const scale = info.small ? 0.45 : 1;
+  const Rr = R * scale;
+
+  if (info.nebula) {
+    const g = c.createRadialGradient(cx, cy, 55, cx, cy, R);
+    g.addColorStop(0, "rgba(46,196,182,0)"); g.addColorStop(0.55, "rgba(46,196,182,0.45)");
+    g.addColorStop(0.85, "rgba(239,71,111,0.35)"); g.addColorStop(1, "rgba(239,71,111,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, R, 0, 7); c.fill();
+  }
+  // outer (uncut) left half of the sphere
+  const outer = layers[0];
+  const sph = c.createRadialGradient(cx - Rr * outer.r * 0.35, cy - Rr * outer.r * 0.35, 4, cx, cy, Rr * outer.r);
+  sph.addColorStop(0, "rgba(255,255,255,0.9)"); sph.addColorStop(0.3, outer.color); sph.addColorStop(1, rgb(envCol.map(v => v * 0.45)));
+  c.fillStyle = sph; c.beginPath(); c.arc(cx, cy, Rr * outer.r, 0, 7); c.fill();
+  // cut face: nested half-discs on the right side
+  layers.forEach(l => {
+    let col = l.color;
+    if (l.fusing) {
+      const pulse = 0.75 + 0.25 * Math.sin(time / (l.flash ? 70 : 400));
+      c.shadowColor = l.color; c.shadowBlur = l.flash ? 25 : 10 * pulse;
+      c.globalAlpha = l.flash ? 0.7 + 0.3 * Math.sin(time / 70) : 1;
+    }
+    c.fillStyle = col; c.beginPath(); c.moveTo(cx, cy - Rr * l.r); c.arc(cx, cy, Rr * l.r, -Math.PI / 2, Math.PI / 2); c.closePath(); c.fill();
+    c.shadowBlur = 0; c.globalAlpha = 1;
+    c.strokeStyle = "rgba(0,0,0,0.35)"; c.lineWidth = 1; c.stroke();
+  });
+  // labels with leader lines
+  const n = layers.length, x0 = 335;
+  layers.forEach((l, i) => {
+    const inner = i < n - 1 ? layers[i + 1].r : 0;
+    const rm = Rr * (l.r + inner) / 2;
+    const ang = -Math.PI / 3 + (n === 1 ? Math.PI / 3 : (i / (n - 1)) * (2 * Math.PI / 3));
+    const px = cx + Math.cos(ang) * rm, py = cy + Math.sin(ang) * rm;
+    const ly = n === 1 ? cy : 35 + i * ((H - 70) / (n - 1));
+    c.strokeStyle = "rgba(230,233,242,0.75)"; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(px, py); c.lineTo(x0 - 10, ly); c.lineTo(x0 - 4, ly); c.stroke();
+    c.fillStyle = "#e6e9f2"; c.beginPath(); c.arc(px, py, 2.2, 0, 7); c.fill();
+    c.fillStyle = l.color; c.fillRect(x0, ly - 5, 10, 10);
+    c.fillStyle = "#e6e9f2"; c.fillText(l.label, x0 + 16, ly);
+  });
+  if (info.nebula) { c.fillStyle = "#9ee6dc"; c.fillText("Ejected envelope (the nebula)", 18, H - 16); }
+}
+
+/* ------------------------------------------------------------------ stage labels on the H-R diagram */
+function drawStageLabels() {
+  const c = hctx;
+  c.font = "11px system-ui"; c.textBaseline = "middle";
+  // boxes already occupied: the "Sun today" label
+  const placed = [{ x0: hx(T_SUN) + 4, x1: hx(T_SUN) + 70, y0: hy(1) + 6, y1: hy(1) + 21 }];
+  const hit = b => placed.some(p => b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0);
+  TRACK.stages.forEach((st, i) => {
+    if (i === 0 || ["Supernova", "Neutron star", "Black hole"].includes(st.name)) return;
+    const sState = stateAt(TRACK, st.u0 + 1e-7);
+    if (sState.remnant || sState.supernova) return;
+    const x = hx(sState.T), y = hy(sState.L);
+    const reached = u >= st.u0;
+    c.fillStyle = reached ? STAGE_INFO[st.name].color : "rgba(200,205,220,0.45)";
+    c.beginPath(); c.arc(x, y, 3.5, 0, 7); c.fill();
+    const w = c.measureText(st.name).width;
+    const prefLeft = x > HR.x0 + HR.w * 0.5;
+    let best = null;
+    search:
+    for (const dy of [0, -14, 14, -28, 28, -42, 42, -56, 56]) {
+      for (const left of [prefLeft, !prefLeft]) {
+        const tx = left ? x - 9 - w : x + 9;
+        const b = { x0: tx - 2, x1: tx + w + 2, y0: y + dy - 7, y1: y + dy + 7 };
+        if (b.x0 < HR.x0 + 2 || b.x1 > HR.x0 + HR.w - 2 || b.y0 < HR.y0 + 8) continue;
+        if (!hit(b)) { best = { tx, ty: y + dy, b }; break search; }
+      }
+    }
+    if (!best) return;
+    placed.push(best.b);
+    if (Math.abs(best.ty - y) > 1) {   // leader line when the label had to move
+      c.strokeStyle = "rgba(200,205,220,0.4)"; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(best.tx < x ? best.b.x1 : best.b.x0, best.ty); c.stroke();
+    }
+    c.fillStyle = "rgba(7,11,24,0.78)";
+    c.fillRect(best.b.x0 - 1, best.b.y0, best.b.x1 - best.b.x0 + 2, best.b.y1 - best.b.y0);
+    c.fillStyle = reached ? "#e6e9f2" : "rgba(200,205,220,0.6)";
+    c.textAlign = "left"; c.fillText(st.name, best.tx, best.ty);
+  });
+  c.textAlign = "left"; c.textBaseline = "alphabetic";
+}
+
+/* ------------------------------------------------------------------ UI */
+const $ = id => document.getElementById(id);
+let current = "1", TRACK = TRACKS[current], u = 0, playing = false, lastT = null;
+const BASE_SPEED = 0.55; // display units per second at 1x
+
+const massBox = $("masses");
+const MASS_ORDER = ["0.5", "1", "2", "5", "10", "20", "40"];
+for (const m of MASS_ORDER) {
+  const b = document.createElement("button"); b.textContent = m; b.dataset.m = m;
+  b.onclick = () => selectMass(m); massBox.appendChild(b);
+}
+
+function selectMass(m) {
+  current = m; TRACK = TRACKS[m]; u = 0; setPlaying(false);
+  document.querySelectorAll(".masses button").forEach(b => b.classList.toggle("active", b.dataset.m === m));
+  buildBands(); buildTable(); render(performance.now());
+}
+function buildBands() {
+  const box = $("bands"); box.innerHTML = "";
+  for (const st of TRACK.stages) {
+    const d = document.createElement("div");
+    d.style.flex = String(Math.max(0.001, st.u1 - st.u0));
+    d.style.background = STAGE_INFO[st.name].color; d.title = st.name;
+    box.appendChild(d);
+  }
+}
+function buildTable() {
+  const tb = $("stage-table"); tb.innerHTML = "";
+  TRACK.stages.forEach((st, i) => {
+    const tr = document.createElement("tr"); tr.dataset.i = i;
+    const last = i === TRACK.stages.length - 1;
+    const dur = last && (st.name === "White dwarf" || st.name === "Neutron star" || st.name === "Black hole")
+      ? "indefinitely" : last && st.name === "Main sequence" ? "> 13.8 billion years (still going)" : fmtDur(st.t1 - st.t0);
+    tr.innerHTML = `<td><span class="swatch" style="background:${STAGE_INFO[st.name].color}"></span>${st.name}</td>` +
+      `<td class="num">${fmtAge(st.t0, Math.min(st.t1 - st.t0, i ? st.t0 - TRACK.stages[i - 1].t0 : Infinity))}</td><td>${dur}</td>`;
+    tr.style.cursor = "pointer"; tr.onclick = () => { u = st.u0 + 1e-6; setPlaying(false); render(performance.now()); };
+    tb.appendChild(tr);
+  });
+}
+
+function render(time) {
+  const s = stateAt(TRACK, u);
+  drawHR(s); drawStar(s, time); drawInterior(s, time);
+  $("ro-age").textContent = fmtAge(s.t, s.segDt);
+  $("ro-M").textContent = s.M.toFixed(s.M < 10 ? 2 : 1) + " M☉";
+  if (s.remnant) {
+    $("ro-L").textContent = "—"; $("ro-T").textContent = "—"; $("ro-C").textContent = "—";
+    $("ro-R").textContent = s.stage === "Neutron star" ? "≈ 10 km" : "event horizon ≈ 30 km";
+  } else if (s.supernova) {
+    $("ro-L").textContent = "≈ 10⁹ L☉"; $("ro-T").textContent = "—"; $("ro-R").textContent = "expanding"; $("ro-C").textContent = "White flash";
+  } else {
+    $("ro-L").textContent = fmtSci(s.L) + " L☉";
+    $("ro-T").textContent = Math.round(s.T).toLocaleString() + " K";
+    $("ro-R").textContent = fmtSci(s.R) + " R☉";
+    $("ro-C").textContent = colorName(s.T);
+  }
+  $("stage-name").textContent = s.stage;
+  $("stage-desc").textContent = STAGE_INFO[s.stage].desc + (u === 0 ? "  " + TRACK.note : "");
+  $("stage-name").parentElement.style.borderLeftColor = STAGE_INFO[s.stage].color === "#ffffff" ? "#ffb347" : STAGE_INFO[s.stage].color;
+  const idx = TRACK.stages.indexOf(stageOf(TRACK, u));
+  document.querySelectorAll("#stage-table tr").forEach(r => r.classList.toggle("current", +r.dataset.i === idx));
+  $("scrub").value = Math.round(u / TRACK.U * 1000);
+}
+
+function setPlaying(p) {
+  playing = p; $("play").textContent = p ? "⏸ Pause" : "▶ Play"; lastT = null;
+}
+function loop(time) {
+  if (playing) {
+    if (lastT !== null) {
+      u += (time - lastT) / 1000 * BASE_SPEED * +$("speed").value;
+      if (u >= TRACK.U) { u = TRACK.U; setPlaying(false); }
+    }
+    lastT = time;
+  }
+  render(time);
+  requestAnimationFrame(loop);
+}
+
+$("play").onclick = () => { if (u >= TRACK.U) u = 0; setPlaying(!playing); };
+$("reset").onclick = () => { u = 0; setPlaying(false); };
+$("speed").oninput = e => $("speed-v").textContent = e.target.value + "×";
+$("scrub").oninput = e => { u = e.target.value / 1000 * TRACK.U; setPlaying(false); };
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); $("play").click(); }
+});
+
+// click on the HR diagram: jump to the nearest point of the track
+hr.addEventListener("click", e => {
+  const rect = hr.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * hr.width / rect.width, y = (e.clientY - rect.top) * hr.height / rect.height;
+  let best = null, bd = 1e9;
+  for (const [T, L, , uu] of trackPoints(TRACK, TRACK.U)) {
+    const d = (hx(T) - x) ** 2 + (hy(L) - y) ** 2;
+    if (d < bd) { bd = d; best = uu; }
+  }
+  if (best !== null && bd < 900) { u = best; setPlaying(false); }
+});
+
+// CSV export of the current track
+$("csv").onclick = () => {
+  const rows = ["time_Myr,stage,luminosity_Lsun,temperature_K,radius_Rsun,mass_Msun"];
+  const N = 400;
+  for (let i = 0; i <= N; i++) {
+    const s = stateAt(TRACK, i / N * TRACK.U);
+    const L = s.remnant || s.supernova ? "" : s.L.toPrecision(5);
+    const T = s.remnant || s.supernova ? "" : Math.round(s.T);
+    const R = s.remnant || s.supernova ? "" : s.R.toPrecision(5);
+    rows.push([s.t.toFixed(4), `"${s.stage}"`, L, T, R, s.M.toFixed(3)].join(","));
+  }
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `star_${current}_solar_mass.csv`; a.click(); URL.revokeObjectURL(a.href);
+};
+
+["iso", "ms", "others", "labels"].forEach(id => $(id).onchange = () => render(performance.now()));
+
+selectMass("1");
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
