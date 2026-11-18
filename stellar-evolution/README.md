@@ -6,7 +6,7 @@ It was built for introductory astronomy courses and is inspired by [Star in a Bo
 
 ## Features
 
-- **Seven initial masses:** 0.5, 1, 2, 5, 10, 20, and 40 M☉. These cover low-mass, intermediate-mass, and high-mass stars.
+- **Eight initial masses:** 0.5, 1, 2, 5, 10, 20, 30, and 40 M☉. These cover low-mass, intermediate-mass, and high-mass stars, including two that end as neutron stars (10 and 20 M☉) and two that end as black holes (30 and 40 M☉).
 - **H–R diagram** with isoradius lines, the main-sequence band, a color strip by temperature, and the track drawn in stage colors as the star evolves.
 - **Star view:** the star's size and color compared with the Sun, including the planetary nebula, the supernova, and the neutron star or black hole remnant.
 - **Live readouts:** age, luminosity, surface temperature, radius, mass, and color.

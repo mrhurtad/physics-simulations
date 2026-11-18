@@ -176,8 +176,8 @@ const STAGE_INFO = {
   "Luminous blue variable": { color: "#7209b7", desc: "An unstable phase with violent eruptions. The star loses huge amounts of mass." },
   "Wolf–Rayet star": { color: "#3a0ca3", desc: "The star has lost its hydrogen envelope, exposing an extremely hot helium-rich surface." },
   "Supernova": { color: "#ffffff", desc: "The iron core collapses in under a second. The rebound blasts the star apart; for a few weeks it can outshine a whole galaxy (about 10⁹ L☉)." },
-  "Neutron star": { color: "#adb5bd", desc: "The collapsed core: about 1.4–2 solar masses packed into a sphere about 20 km across. It is too faint to appear on this diagram." },
-  "Black hole": { color: "#495057", desc: "The core collapses so far that not even light escapes. Nothing is left to plot on the diagram." },
+  "Neutron star": { color: "#adb5bd", desc: "The collapsed core: about 1.4–2 solar masses packed into a sphere about 20 km across. It is too faint to appear on this diagram. Stars born with roughly 8–25 solar masses usually end this way." },
+  "Black hole": { color: "#495057", desc: "The core collapses so far that not even light escapes. Nothing is left to plot on the diagram. Stars born with more than roughly 25 solar masses usually end this way (the exact limit is still uncertain)." },
 };
 
 /* ------------------------------------------------------------------ evolutionary tracks
@@ -297,6 +297,21 @@ const TRACKS = {
       { t: 12, M: 1.6, stage: "Neutron star", remnant: true, w: 1 },
     ],
   },
+  "30": {
+    note: "A 30 M☉ star becomes a red supergiant and loses about half of its mass in winds. Its core is too massive to become a neutron star: it collapses into a black hole.",
+    keys: [
+      { t: 0, L: 120000, T: 39500, M: 30, stage: "Main sequence" },
+      { t: 4, L: 160000, T: 36500, M: 29.3, stage: "Main sequence", w: 2 },
+      { t: 5.9, L: 220000, T: 30000, M: 28, stage: "Main sequence", w: 1.5 },
+      { t: 6.0, L: 230000, T: 31000, M: 27.8, stage: "Hertzsprung gap", w: 0.8 },
+      { t: 6.05, L: 240000, T: 6000, M: 27, stage: "Red supergiant", w: 1 },
+      { t: 6.2, L: 260000, T: 3700, M: 24, stage: "Red supergiant", w: 0.8 },
+      { t: 6.6, L: 300000, T: 3600, M: 15, stage: "Red supergiant", w: 1.2 },
+      { t: 6.7, L: 320000, T: 3600, M: 14, stage: "Supernova", w: 1 },
+      { t: 6.7000001, M: 8, stage: "Black hole", remnant: true, w: 1.2 },
+      { t: 8, M: 8, stage: "Black hole", remnant: true, w: 1 },
+    ],
+  },
   "40": {
     note: "A very massive star never becomes a red supergiant: winds strip its envelope, it becomes a Wolf–Rayet star, and its core collapses into a black hole.",
     keys: [
@@ -315,7 +330,7 @@ const TRACKS = {
 };
 
 const ZAMS = [ [3200, 0.006], [3800, 0.038], [4500, 0.16], [5600, 0.70], [6500, 2.5], [9100, 16], [12500, 90],
-               [17000, 550], [25200, 5550], [34500, 45000], [43000, 220000], [47000, 450000] ];
+               [17000, 550], [25200, 5550], [34500, 45000], [39500, 120000], [43000, 220000], [47000, 450000] ];
 
 /* ------------------------------------------------------------------ build per-track derived data */
 for (const tr of Object.values(TRACKS)) {
@@ -794,7 +809,7 @@ let current = "1", TRACK = TRACKS[current], u = 0, playing = false, lastT = null
 const BASE_SPEED = 0.55; // display units per second at 1x
 
 const massBox = $("masses");
-const MASS_ORDER = ["0.5", "1", "2", "5", "10", "20", "40"];
+const MASS_ORDER = ["0.5", "1", "2", "5", "10", "20", "30", "40"];
 for (const m of MASS_ORDER) {
   const b = document.createElement("button"); b.textContent = m; b.dataset.m = m;
   b.onclick = () => selectMass(m); massBox.appendChild(b);
@@ -840,7 +855,7 @@ function render(time) {
   $("ro-M").textContent = s.M.toFixed(s.M < 10 ? 2 : 1) + " M☉";
   if (s.remnant) {
     $("ro-L").textContent = "—"; $("ro-T").textContent = "—"; $("ro-C").textContent = "—";
-    $("ro-R").textContent = s.stage === "Neutron star" ? "≈ 10 km" : "event horizon ≈ 30 km";
+    $("ro-R").textContent = s.stage === "Neutron star" ? "≈ 10 km" : `event horizon ≈ ${Math.round(2.95 * s.M)} km`;
   } else if (s.supernova) {
     $("ro-L").textContent = "≈ 10⁹ L☉"; $("ro-T").textContent = "—"; $("ro-R").textContent = "expanding"; $("ro-C").textContent = "White flash";
   } else {
